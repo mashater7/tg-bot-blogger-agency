@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<title>Бот для блогеров: коротко</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: тёмная «карта экосистемы» сверху, затем живой прототип (телефон + панель), карты путей по ролям, дерево развилок, справка */
+:root{
+  --bg:#f2f4f8; --surface:#ffffff; --ink:#131a2c; --muted:#5a6479; --line:#dbe1eb;
+  --sky:#2a8bd8; --sky-soft:#e2effa;
+  --coral:#e2577a; --coral-soft:#fde7ee;
+  --gold:#c4860f; --gold-soft:#fbf0d9;
+  --mint:#1c9468; --mint-soft:#dcf3e8;
+  --red:#cf3b3b; --red-soft:#fbe3e3;
+  --hero:#0f1b33; --hero-ink:#ecf1fb; --hero-mut:#9eb0cd; --hero-box:rgba(255,255,255,.06); --hero-line:rgba(255,255,255,.16);
+  --road:#c9d3e2; --frame:#1b2233; --tg-head:#517da2; --chat:#cfdfe9; --chat-dot:rgba(255,255,255,.35);
+  --bubble:#ffffff; --bubble-me:#e1f7cb; --ik:rgba(255,255,255,.78); --ik-ink:#1f6aa3; --sep:rgba(40,70,90,.35);
+  --f-display:"Unbounded","Golos Text",system-ui,sans-serif;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e121b; --surface:#161c29; --ink:#e6eaf3; --muted:#98a2b7; --line:#283044;
+  --sky:#5aaef0; --sky-soft:#152f48; --coral:#f07b98; --coral-soft:#3a1c26;
+  --gold:#e2a93b; --gold-soft:#35280e; --mint:#4cc797; --mint-soft:#113226; --red:#ef6b6b; --red-soft:#391616;
+  --hero:#0a1426; --frame:#05080f; --tg-head:#24364a; --chat:#0f1a26; --chat-dot:rgba(255,255,255,.04); --road:#2c3850;
+  --bubble:#1d2b3a; --bubble-me:#2b5278; --ik:rgba(120,170,220,.16); --ik-ink:#9fd0ff; --sep:rgba(0,0,0,.45); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e121b; --surface:#161c29; --ink:#e6eaf3; --muted:#98a2b7; --line:#283044;
+  --sky:#5aaef0; --sky-soft:#152f48; --coral:#f07b98; --coral-soft:#3a1c26;
+  --gold:#e2a93b; --gold-soft:#35280e; --mint:#4cc797; --mint-soft:#113226; --red:#ef6b6b; --red-soft:#391616;
+  --hero:#0a1426; --frame:#05080f; --tg-head:#24364a; --chat:#0f1a26; --chat-dot:rgba(255,255,255,.04); --road:#2c3850;
+  --bubble:#1d2b3a; --bubble-me:#2b5278; --ik:rgba(120,170,220,.16); --ik-ink:#9fd0ff; --sep:rgba(0,0,0,.45); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 80px;display:flex;flex-direction:column;gap:80px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.2;margin:0}
+h1{font-size:clamp(28px,4.6vw,50px);font-weight:700;letter-spacing:-.01em}
+h2{font-size:clamp(22px,3vw,32px);font-weight:700}
+h3{font-size:16px;font-weight:500}
+p{margin:0}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+.eyebrow{font:600 12px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--sky)}
+section{display:flex;flex-direction:column;gap:22px}
+.sec-head{display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.sec-head p{color:var(--muted)}
+.pill{font:600 11.5px var(--f-body);padding:3px 9px;border-radius:999px;white-space:nowrap;display:inline-block}
+.p-new{background:var(--sky-soft);color:var(--sky)} .p-wait{background:var(--gold-soft);color:var(--gold)}
+.p-ok{background:var(--mint-soft);color:var(--mint)} .p-bad{background:var(--red-soft);color:var(--red)} .p-mut{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+
+/* ===== HERO / ЭКОСИСТЕМА ===== */
+.hero{background:var(--hero);color:var(--hero-ink);border-radius:26px;padding:clamp(22px,4vw,44px);display:flex;flex-direction:column;gap:34px;color-scheme:dark}
+.hero .eyebrow{color:#7cc4ff}
+.hero-top{display:grid;grid-template-columns:1.3fr 1fr;gap:28px;align-items:end}
+.hero-top p{color:var(--hero-mut);font-size:17px;max-width:56ch}
+.hero-top>div{display:flex;flex-direction:column;gap:14px;min-width:0}
+.eco{display:grid;grid-template-columns:1fr 70px 1.35fr 70px 1fr 70px 1fr;align-items:stretch}
+.node{background:var(--hero-box);border:1px solid var(--hero-line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.node h3{font-size:14px;color:var(--hero-ink)}
+.node .sub{font-size:12.5px;color:var(--hero-mut)}
+.node.core{background:rgba(124,196,255,.08);border-color:rgba(124,196,255,.35)}
+.ppl{display:flex;flex-direction:column;gap:8px}
+.ppl div{display:flex;gap:10px;align-items:center;font-size:13.5px}
+.av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 12px var(--f-display);color:#fff;flex:0 0 30px}
+.av.a{background:#e7ecf6;color:#0f1b33} .av.m{background:#2a8bd8} .av.b{background:#e2577a} .av.t{background:#2aa1da}
+.mods{display:flex;flex-wrap:wrap;gap:6px}
+.mods span{font-size:12px;padding:4px 8px;border-radius:7px;background:rgba(255,255,255,.07);border:1px solid var(--hero-line)}
+.link{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:600 10.5px var(--f-mono);color:var(--hero-mut);text-transform:uppercase;letter-spacing:.06em;text-align:center}
+.link i{display:block;width:100%;height:2px;background:linear-gradient(90deg,transparent,#7cc4ff,transparent);position:relative}
+.link i::before,.link i::after{content:"";position:absolute;top:-4px;border:5px solid transparent}
+.link i::after{right:0;border-left-color:#7cc4ff;border-right:0}
+.link i::before{left:0;border-right-color:#7cc4ff;border-left:0}
+.eco-bottom{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.eco-bottom div{border:1px dashed var(--hero-line);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--hero-mut)}
+.eco-bottom b{color:var(--hero-ink);font-weight:600;display:block;margin-bottom:2px}
+.packets{position:absolute;inset:0;pointer-events:none}
+
+/* ===== ПРОСТАЯ ДОРОЖКА ===== */
+.cast{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.who{display:flex;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px 16px;min-width:0}
+.who .face{flex:0 0 58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:30px;border:3px solid;background:var(--bg)}
+.who b{font:500 16px var(--f-display);display:block}
+.who span{font-size:14px;color:var(--muted);line-height:1.4}
+.road{position:relative;display:grid;grid-template-columns:repeat(4,1fr);row-gap:40px;column-gap:14px;padding:10px 70px 10px 0}
+.road svg.path{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:0}
+.road .base{stroke:var(--road);stroke-width:18;fill:none;stroke-linecap:round}
+.road .dash{stroke:var(--surface);stroke-width:2.5;fill:none;stroke-dasharray:10 10;animation:march 1.2s linear infinite}
+@keyframes march{to{stroke-dashoffset:-20}}
+.stop{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;min-width:0}
+.stop .ico{width:92px;height:92px;border-radius:50%;display:grid;place-items:center;font-size:42px;background:var(--surface);border:5px solid var(--sky);box-shadow:0 6px 18px rgba(20,30,60,.12);position:relative}
+.stop .ico em{position:absolute;top:-6px;left:-6px;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--bg);font:700 13px/28px var(--f-mono);font-style:normal}
+.stop[data-w="b"] .ico{border-color:var(--coral)} .stop[data-w="t"] .ico{border-color:var(--mint)}
+.stop .txt{background:var(--bg);border-radius:12px;padding:6px 10px;display:flex;flex-direction:column;gap:4px;align-items:center}
+.stop b{font:500 16px/1.25 var(--f-display)}
+.stop p{font-size:14px;color:var(--muted);line-height:1.4;max-width:24ch}
+.tag{font:600 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;border-radius:6px}
+.tag.m{background:var(--sky-soft);color:var(--sky)} .tag.b{background:var(--coral-soft);color:var(--coral)} .tag.t{background:var(--mint-soft);color:var(--mint)}
+.road .stop:nth-child(6){grid-row:2;grid-column:4} .road .stop:nth-child(7){grid-row:2;grid-column:3}
+.road .stop:nth-child(8){grid-row:2;grid-column:2} .road .stop:nth-child(9){grid-row:2;grid-column:1}
+.always{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.always div{display:flex;gap:14px;align-items:center;border:2px dashed var(--line);border-radius:16px;padding:14px 16px;font-size:15px}
+.always i{font-style:normal;font-size:30px}
+.oops{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.oops div{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.oops i{font-style:normal;font-size:34px}
+.oops b{font:500 15px var(--f-display)}
+.oops p{font-size:14px;color:var(--muted);line-height:1.45}
+.oops p strong{color:var(--ink);font-weight:600}
+@media (max-width:900px){
+  .cast,.oops{grid-template-columns:1fr 1fr}
+  .always{grid-template-columns:1fr}
+  .road{grid-template-columns:1fr;row-gap:22px;padding:0}
+  .road .stop:nth-child(n){grid-row:auto;grid-column:1}
+  .stop{flex-direction:row;text-align:left;align-items:center}
+  .stop .ico{flex:0 0 76px;width:76px;height:76px;font-size:34px}
+  .stop .ico em{left:auto;right:-6px}
+  .stop .txt{align-items:flex-start}
+  .stop p{max-width:none}
+}
+@media (max-width:520px){.cast,.oops{grid-template-columns:1fr}}
+
+/* ===== ПРОТОТИП ===== */
+.sim{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.sim-top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{font:500 14px var(--f-body);padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.restart{font:500 14px var(--f-body);padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
+.progress-scroll{overflow-x:auto}
+.progress{display:grid;grid-template-columns:repeat(9,minmax(78px,1fr));min-width:700px}
+.pg{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--muted);position:relative;text-align:center}
+.pg::before{content:"";position:absolute;top:9px;left:-50%;width:100%;height:2px;background:var(--line);z-index:0}
+.pg:first-child::before{content:none}
+.pg i{width:20px;height:20px;border-radius:50%;border:2px solid var(--line);background:var(--surface);z-index:1;display:grid;place-items:center;font:700 10px var(--f-mono);font-style:normal}
+.pg.done{color:var(--ink)} .pg.done i{background:var(--mint);border-color:var(--mint);color:#fff}
+.pg.done::before,.pg.cur::before{background:var(--mint)}
+.pg.cur{color:var(--sky);font-weight:600} .pg.cur i{border-color:var(--sky);box-shadow:0 0 0 4px var(--sky-soft)}
+.pg.skip{opacity:.45;text-decoration:line-through}
+.hintbar{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--bg);border:1px solid var(--line);min-height:52px}
+.turn{font:600 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:6px 9px;border-radius:7px;white-space:nowrap}
+.turn.b{background:var(--coral-soft);color:var(--coral)} .turn.m{background:var(--sky-soft);color:var(--sky)} .turn.e{background:var(--mint-soft);color:var(--mint)}
+.hint{font-size:14.5px}
+.sim-body{display:grid;grid-template-columns:minmax(300px,370px) minmax(0,1fr);gap:18px;align-items:start}
+.side-label{font:600 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.side-label i{width:8px;height:8px;border-radius:50%}
+
+/* телефон */
+.tgp{border:9px solid var(--frame);border-radius:34px;overflow:hidden;display:flex;flex-direction:column;height:620px;background:var(--chat)}
+.tgp-head{background:var(--tg-head);color:#fff;display:flex;gap:10px;padding:10px 12px;align-items:center}
+.tgp-head .av{width:36px;height:36px;flex-basis:36px;background:linear-gradient(135deg,#2aa1da,#1c9468);font-size:13px}
+.tgp-head b{font-size:14.5px;font-weight:600;display:block;line-height:1.2}
+.tgp-head small{font-size:12px;opacity:.75}
+.tgp-chat{flex:1;overflow-y:auto;padding:12px 10px;display:flex;flex-direction:column;gap:6px;
+  background-color:var(--chat);background-image:radial-gradient(var(--chat-dot) 1.2px,transparent 1.3px);background-size:16px 16px;scroll-behavior:smooth}
+.bb{max-width:86%;padding:7px 10px 6px;border-radius:14px;font-size:13.5px;line-height:1.45;color:var(--ink);box-shadow:0 1px 1px rgba(0,0,0,.08);animation:pop .22s ease-out}
+.bb.bot{align-self:flex-start;background:var(--bubble);border-bottom-left-radius:4px}
+.bb.me{align-self:flex-end;background:var(--bubble-me);border-bottom-right-radius:4px}
+.bb .tm{float:right;font-size:10.5px;color:var(--muted);margin:7px 0 -2px 10px;font-variant-numeric:tabular-nums}
+.bb i{font-style:italic}
+.ikb{align-self:flex-start;width:86%;display:grid;grid-template-columns:repeat(2,1fr);gap:4px;animation:pop .22s ease-out}
+.ikb button{background:var(--ik);color:var(--ik-ink);border:0;border-radius:9px;padding:8px 6px;font:500 13px var(--f-body);cursor:pointer;backdrop-filter:blur(4px)}
+.ikb button.full{grid-column:1/-1}
+.ikb button:hover{filter:brightness(1.08)}
+.ikb.used button{opacity:.4;pointer-events:none}
+.ikb.live button{animation:glow 1.6s ease-in-out infinite}
+.sep{align-self:center;font-size:11.5px;background:var(--sep);color:#fff;padding:2px 10px;border-radius:999px;margin:4px 0}
+.typing{align-self:flex-start;background:var(--bubble);border-radius:14px;padding:10px 12px;display:flex;gap:4px}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1s infinite}
+.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+.offer-img{height:112px;border-radius:10px;margin:-1px -3px 8px;display:flex;flex-direction:column;justify-content:flex-end;padding:10px 12px;color:#fff}
+.offer-img span{font:700 20px var(--f-display)} .offer-img small{font-size:12px;opacity:.85}
+.og{background:radial-gradient(circle at 80% 20%,#c9b6ef,transparent 45%),linear-gradient(135deg,#7f63c9,#c57aa8)}
+.or{background:radial-gradient(circle at 75% 25%,#f0c48a,transparent 45%),linear-gradient(135deg,#b06a32,#5a3018)}
+.thumb{width:190px;max-width:100%;height:110px;border-radius:10px;background:linear-gradient(135deg,#283a52,#101826);display:grid;place-items:center;color:#fff;font-size:26px;margin-bottom:6px}
+.thumb.img{background:linear-gradient(135deg,#e7eef7,#c7d6e8);color:#33465f;font-size:12px}
+.fname{font-size:12px;color:var(--muted)}
+.tgp-input{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--surface);border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.tgp-input .menu{background:var(--sky);color:#fff;border-radius:8px;padding:4px 9px;font-weight:600;font-size:12px}
+
+/* панель */
+.pn{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column;min-width:0;min-height:620px}
+.pn-bar{display:flex;gap:6px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font:12px var(--f-mono);color:var(--muted);background:var(--bg)}
+.pn-bar i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.pn-grid{display:grid;grid-template-columns:160px minmax(0,1fr);flex:1}
+.pn-side{border-right:1px solid var(--line);padding:14px 10px;display:flex;flex-direction:column;gap:2px;font-size:13.5px}
+.pn-side .me{display:flex;gap:8px;align-items:center;padding:0 6px 12px;margin-bottom:6px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.3}
+.pn-side .me small{color:var(--muted);display:block}
+.pn-side span.t{padding:7px 10px;border-radius:8px;color:var(--muted);display:flex;justify-content:space-between}
+.pn-side span.t.on{background:var(--sky-soft);color:var(--sky);font-weight:600}
+.pn-side span.t em{font-style:normal;font:600 11px var(--f-mono);background:var(--coral);color:#fff;border-radius:999px;padding:1px 6px}
+.pn-main{padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.pn-main.flash{animation:flash .7s ease-out}
+.crumb{font-size:12.5px;color:var(--muted)}
+.pcard{border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.pc-h{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.pc-h b{font:500 15px var(--f-display)}
+dl.kv{display:grid;grid-template-columns:minmax(110px,160px) minmax(0,1fr);gap:7px 14px;margin:0;font-size:13.5px}
+dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.seats{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seat-bar{width:120px;height:8px;border-radius:99px;background:var(--bg);border:1px solid var(--line);overflow:hidden;display:inline-block}
+.seat-bar i{display:block;height:100%;background:var(--sky);transition:width .5s}
+.seats em{font-style:normal;font-size:11.5px;color:var(--gold)}
+.input{border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:13px var(--f-mono);background:var(--bg);display:inline-block}
+.vers{display:flex;gap:10px;flex-wrap:wrap}
+.ver{border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;width:170px}
+.ver .thumb{width:100%;height:80px;font-size:20px;margin:0}
+.ver.old{opacity:.6}
+.note{font-size:12.5px;color:var(--muted);border-left:3px solid var(--gold);padding-left:10px}
+.hist{margin:0;padding-left:18px;font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:3px;font-variant-numeric:tabular-nums}
+.pacts{display:flex;gap:8px;flex-wrap:wrap}
+.pacts button{font:600 13.5px var(--f-body);padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.pacts .a-ok{background:var(--mint);border-color:var(--mint);color:#fff}
+.pacts .a-warn{background:var(--gold);border-color:var(--gold);color:#fff}
+.pacts .a-bad{color:var(--red);border-color:var(--red)}
+.pacts.live .a-ok,.pacts.live .a-warn{animation:glow 1.6s ease-in-out infinite}
+.mini{width:100%;border-collapse:collapse;font-size:13px}
+.mini th{text-align:left;font:600 10.5px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line)}
+.mini td{padding:7px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.mini tr.hl td{background:var(--sky-soft)}
+.tbl-scroll{overflow-x:auto}
+
+@keyframes pop{from{transform:translateY(6px);opacity:.3}to{transform:none;opacity:1}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(42,139,216,0)}50%{box-shadow:0 0 0 5px rgba(42,139,216,.28)}}
+@keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes flash{from{background:var(--sky-soft)}to{background:transparent}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ===== ПУТИ ПО РОЛЯМ ===== */
+.roles{display:flex;gap:6px;flex-wrap:wrap}
+.jr-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:18px;background:var(--surface)}
+.jr{display:grid;min-width:1000px}
+.jr .c{padding:12px 14px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);font-size:13.5px;line-height:1.5;min-width:0}
+.jr .rl{font:600 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg);position:sticky;left:0;z-index:1}
+.jr .hd{display:flex;flex-direction:column;gap:6px;background:var(--bg)}
+.jr .hd b{font:500 14px var(--f-display)}
+.jr .hd .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font:700 11px var(--f-mono);color:#fff}
+.jr .where{font:600 12px var(--f-mono)}
+.jr .risk{color:var(--muted)}
+.jr .risk b{display:block;color:var(--red);font-weight:600}
+.jr .risk span{display:block;color:var(--mint);font-weight:500}
+.jr .last{border-bottom:0}
+
+/* ===== ДЕРЕВО ===== */
+.tree-wrap{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:20px;align-items:start}
+.tree-scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:10px}
+.tree-scroll svg{display:block;min-width:760px;width:100%;height:auto}
+.tn rect{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.tn text{fill:var(--ink);font:500 13.5px var(--f-body)}
+.tn.k-b rect{stroke:var(--coral)} .tn.k-m rect{stroke:var(--sky)}
+.tn.k-d rect{fill:var(--gold-soft);stroke:var(--gold)} .tn.k-d text{font-weight:600}
+.tn.k-bad rect{fill:var(--red-soft);stroke:var(--red)} .tn.k-ok rect{fill:var(--mint-soft);stroke:var(--mint)} .tn.k-w rect{fill:var(--sky-soft);stroke:var(--sky)}
+.te{stroke:var(--muted);stroke-width:1.5;fill:none}
+.te.d{stroke-dasharray:5 4}
+.tl-lbl{fill:var(--muted);font:600 11.5px var(--f-mono)}
+.arrowhead{fill:var(--muted)}
+.legend{display:flex;flex-direction:column;gap:10px;font-size:14px}
+.legend div{display:flex;gap:10px;align-items:flex-start}
+.legend i{flex:0 0 22px;height:16px;border-radius:5px;border:1.5px solid;margin-top:3px}
+
+/* ===== ЭТАПЫ РАССЫЛКИ ===== */
+.stage-box{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.tl-scroll{overflow-x:auto}
+.tl{min-width:620px;display:grid;grid-template-columns:110px 1fr;row-gap:12px;font-variant-numeric:tabular-nums}
+.tl .lbl{font:500 14px var(--f-display);align-self:center}
+.tl .track{position:relative;height:40px;background:var(--bg);border-radius:8px}
+.tl .bar{position:absolute;top:0;bottom:0;border-radius:8px;display:flex;align-items:center;padding:0 10px;font:600 12px var(--f-mono);color:#fff;white-space:nowrap;overflow:hidden;transition:left .4s,width .4s}
+.tl .axis{position:relative;height:20px;font:12px var(--f-mono);color:var(--muted)}
+.tl .axis span{position:absolute;transform:translateX(-50%)}
+.b1{background:var(--coral)} .b2{background:var(--gold)} .b3{background:var(--sky)}
+.stage-note{font-size:14.5px;color:var(--muted);max-width:78ch}
+.stage-note b{color:var(--ink)}
+
+/* ===== TELEGRAM, ЭТАПЫ, ВОПРОСЫ ===== */
+.tg-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.tg{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.tg h3{font-size:15px} .tg p{font-size:14px;color:var(--muted)}
+.tg .fix{font-size:13.5px;color:var(--ink);border-top:1px dashed var(--line);padding-top:8px}
+.tg .fix::before{content:"Как учтём: ";font-weight:600;color:var(--mint)}
+.num{font:600 13px var(--f-mono);color:var(--sky)}
+.phases{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.phase{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.phase ul{margin:0;padding-left:18px;font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.phase .tests{font:12px var(--f-mono);color:var(--muted)}
+.chip{display:inline-flex;font:600 11px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;padding:6px 8px;border-radius:6px;align-self:flex-start}
+.ch-1{background:var(--sky-soft);color:var(--sky)} .ch-2{background:var(--mint-soft);color:var(--mint)} .ch-3{background:var(--gold-soft);color:var(--gold)}
+.exp{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.exp div{border-top:3px solid var(--mint);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+.exp b{font-family:var(--f-display);font-weight:500;font-size:15px}
+.exp p{font-size:14px;color:var(--muted)}
+.qbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.btn{font:600 14px var(--f-body);padding:10px 16px;border-radius:10px;border:0;background:var(--ink);color:var(--bg);cursor:pointer}
+.qstatus{font-size:13px;color:var(--muted)}
+.qgroups{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.qg{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.qg h3{font-size:15px}
+.qg ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14.5px}
+.qg li small{display:block;color:var(--muted);font-size:13px}
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.flow div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.flow i{font:700 12px/24px var(--f-mono);font-style:normal;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--bg);text-align:center}
+.flow b{font:500 14px var(--f-display)} .flow span{font-size:13px;color:var(--muted);line-height:1.4}
+.plan-tools{display:flex;justify-content:flex-end}
+.pstage{display:flex;flex-direction:column;gap:8px}
+.pstage-h{display:flex;flex-direction:column;gap:6px;margin:14px 0 6px}
+.pstage-h h3{font-size:20px} .pstage-h p{color:var(--muted);font-size:14.5px;max-width:72ch}
+.ch-0{background:var(--bg);color:var(--ink);border:1px solid var(--line)}
+details.fn{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+details.fn summary{cursor:pointer;list-style:none;padding:13px 16px;display:flex;gap:12px;align-items:center;font:500 15px var(--f-body)}
+details.fn summary::-webkit-details-marker{display:none}
+details.fn summary::after{content:"+";margin-left:auto;font:600 18px var(--f-mono);color:var(--muted)}
+details.fn[open] summary::after{content:"−"}
+details.fn[open] summary{border-bottom:1px solid var(--line)}
+.fn-n{font:600 12px var(--f-mono);color:var(--sky);min-width:30px}
+.fn-b{display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:18px;padding:14px 16px 16px}
+.fn-b>div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fn-b b{font:600 11px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.fn-b p,.fn-b ol{font-size:14px;margin:0;line-height:1.5}
+.fn-b ol{padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.fn-b .need{grid-column:1/-1;background:var(--gold-soft);border-radius:10px;padding:10px 12px}
+.fn-b .need b{color:var(--gold)}
+.after{border:2px dashed var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;margin-top:10px}
+.after b{font:500 16px var(--f-display)} .after p{color:var(--muted);font-size:14.5px}
+@media (max-width:900px){.flow{grid-template-columns:1fr 1fr}.fn-b{grid-template-columns:1fr}}
+@media (max-width:520px){.flow{grid-template-columns:1fr}}
+.agroups{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.ag{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ag h3{font-size:15px}
+.ag ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:12px;font-size:14px}
+.ag li{color:var(--muted)}
+.ag li b{display:block;color:var(--ink);font-weight:600;font-size:14.5px}
+.ag li span{display:block;font-size:13.5px;margin-top:2px}
+.ag li span::before{content:"→ ";color:var(--mint);font-weight:600}
+.ag li.warn span::before{content:"⚠ ";color:var(--gold)}
+.qg.follow{border-color:var(--gold)}
+@media (max-width:980px){.agroups{grid-template-columns:1fr}}
+textarea#qtext{width:100%;min-height:120px;font:13px var(--f-mono);border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:10px}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:20px}
+
+@media (max-width:980px){
+  .eco{grid-template-columns:1fr;gap:0}
+  .link{flex-direction:row;padding:10px 0}
+  .link i{width:2px;height:28px;background:linear-gradient(180deg,transparent,#7cc4ff,transparent)}
+  .link i::before,.link i::after{content:none}
+  .hero-top,.eco-bottom,.tree-wrap,.tg-grid,.phases,.exp,.qgroups{grid-template-columns:1fr}
+  .sim-body{grid-template-columns:1fr}
+  .tgp{max-width:380px;width:100%;margin:0 auto;height:560px}
+}
+@media (max-width:640px){
+  .pn-grid{grid-template-columns:1fr}
+  .pn-side{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);gap:4px}
+  .pn-side .me{display:none}
+  .pn-side span.t{white-space:nowrap}
+  dl.kv{grid-template-columns:1fr;gap:2px}
+  dl.kv dd{margin-bottom:6px}
+}
+</style>
+
+<div class="wrap">
+
+<!-- ===== ЭКОСИСТЕМА ===== -->
+<header class="hero">
+  <div class="hero-top">
+    <div>
+      <span class="eyebrow">Коротко</span>
+      <h1>Бот для блогеров рекламного агентства</h1>
+    </div>
+  </div>
+</header>
+
+<!-- ===== ПРОСТО ===== -->
+<section id="simple">
+  <div class="sec-head">
+    <span class="eyebrow">Если совсем просто</span>
+    <h2>Как это работает: дорожка от подарка до поста</h2>
+    <p>Агентство дарит блогеру подарок или ужин в кафе, а блогер рассказывает о нём у себя. Бот следит, чтобы никто ничего не забыл.</p>
+  </div>
+
+  <div class="cast">
+    <div class="who"><span class="face" style="border-color:var(--sky)">👩‍💼</span><div><b>Менеджер</b><span>Решает, кому дарить, и проверяет работу</span></div></div>
+    <div class="who"><span class="face" style="border-color:var(--mint)">🤖</span><div><b>Бот</b><span>Почтальон и будильник. Носит сообщения и напоминает</span></div></div>
+    <div class="who"><span class="face" style="border-color:var(--coral)">🤳</span><div><b>Блогер</b><span>Получает подарок и рассказывает о нём</span></div></div>
+    <div class="who"><span class="face" style="border-color:var(--gold)">📒</span><div><b>Тетрадка</b><span>Сервер. Записывает каждый шаг, ничего не теряет</span></div></div>
+  </div>
+
+  <div class="road" id="road">
+    <svg class="path" aria-hidden="true"><path class="base"/><path class="dash"/></svg>
+    <div class="stop" data-w="m"><div class="ico">🎁<em>1</em></div><div class="txt"><b>Есть подарок!</b><p>Менеджер выбирает, кому его предложить</p><span class="tag m">менеджер</span></div></div>
+    <div class="stop" data-w="t"><div class="ico">📨<em>2</em></div><div class="txt"><b>Бот рассылает</b><p>Сначала самым любимым блогерам, через час остальным</p><span class="tag t">бот</span></div></div>
+    <div class="stop" data-w="b"><div class="ico">🙋<em>3</em></div><div class="txt"><b>«Хочу!»</b><p>Блогер жмёт кнопку и отвечает на пару вопросов</p><span class="tag b">блогер</span></div></div>
+    <div class="stop" data-w="m"><div class="ico">👍<em>4</em></div><div class="txt"><b>«Ты участвуешь»</b><p>Менеджер говорит «да». Одно место занято</p><span class="tag m">менеджер</span></div></div>
+    <div class="stop" data-w="b"><div class="ico">📦<em>5</em></div><div class="txt"><b>«Получила!»</b><p>Пришла посылка или блогер сходил в кафе</p><span class="tag b">блогер</span></div></div>
+    <div class="stop" data-w="b"><div class="ico">🎬<em>6</em></div><div class="txt"><b>«Так нормально?»</b><p>Блогер показывает видео до публикации</p><span class="tag b">блогер</span></div></div>
+    <div class="stop" data-w="b"><div class="ico">📱<em>7</em></div><div class="txt"><b>Пост вышел</b><p>Блогер выкладывает и присылает ссылку</p><span class="tag b">блогер</span></div></div>
+    <div class="stop" data-w="m"><div class="ico">🏁<em>8</em></div><div class="txt"><b>Готово!</b><p>Менеджер ставит галочку</p><span class="tag m">менеджер</span></div></div>
+  </div>
+
+  <div class="always">
+    <div><i>⏰</i><span>Всю дорогу бот сам помнит сроки и напоминает: за 3 дня, за день и в последний день.</span></div>
+    <div><i>📒</i><span>Каждый шаг записан в тетрадку. Через месяц видно, кто, что и когда сделал.</span></div>
+  </div>
+
+  <div class="sec-head" style="margin-top:12px"><h3 style="font-size:20px">А если что-то пошло не так?</h3></div>
+  <div class="oops">
+    <div><i>🚦</i><b>Мест уже нет</b><p>Блогер встаёт в очередь. <strong>Место освободится — бот позовёт первого.</strong></p></div>
+    <div><i>🐢</i><b>Не успеваю</b><p>Блогер нажимает «Нужен перенос». <strong>Новый срок назначает менеджер.</strong></p></div>
+    <div><i>😴</i><b>Забыл про пост</b><p>Бот напомнит. Если срок прошёл, <strong>новые подарки на паузе</strong>, пока не придёт ссылка.</p></div>
+    <div><i>🙅</i><b>Передумал</b><p>Блогер отказывается. <strong>Место сразу отдают следующему</strong> в очереди.</p></div>
+  </div>
+</section>
+
+<!-- ===== ПРОТОТИП ===== -->
+<section id="try">
+  <div class="sec-head">
+    <span class="eyebrow">Попробуйте сами</span>
+    <h2>Живой прототип: блогер и менеджер одновременно</h2>
+    <p>Слева Telegram блогера, справа панель менеджера. Нажимайте подсвеченные кнопки: действие блогера сразу появляется в панели, решение менеджера приходит блогеру в чат. Это демонстрация, данные выдуманы.</p>
+  </div>
+
+  <div class="sim">
+    <div class="sim-top">
+      <div class="seg" role="group" aria-label="Сценарий">
+        <button type="button" id="sc-g" data-sc="g" aria-pressed="true">Товар с согласованием контента</button>
+        <button type="button" id="sc-r" data-sc="r" aria-pressed="false">Ресторан, лимит записей, просрочка</button>
+      </div>
+      <button type="button" class="restart" id="restart">↺ Начать заново</button>
+    </div>
+    <div class="progress-scroll"><div class="progress" id="progress"></div></div>
+    <div class="hintbar" aria-live="polite"><span class="turn b" id="turn">Ход блогера</span><span class="hint" id="hint"></span></div>
+
+    <div class="sim-body">
+      <div>
+        <div class="side-label"><i style="background:var(--coral)"></i><span id="who">Блогер</span></div>
+        <div class="tgp">
+          <div class="tgp-head"><span class="av">К</span><div><b>Агентство · Коллаборации</b><small>бот</small></div></div>
+          <div class="tgp-chat" id="chat"></div>
+          <div class="tgp-input"><span class="menu">☰ Меню</span><span>Сообщение</span></div>
+        </div>
+      </div>
+      <div style="min-width:0">
+        <div class="side-label"><i style="background:var(--sky)"></i>Менеджер · веб-панель</div>
+        <div class="pn">
+          <div class="pn-bar"><i></i><i></i><i></i>&nbsp; panel.agency.ru</div>
+          <div class="pn-grid">
+            <nav class="pn-side" id="pnside"></nav>
+            <div class="pn-main" id="pnmain"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== ДЕРЕВО ===== -->
+<section id="tree">
+  <div class="sec-head">
+    <span class="eyebrow">Все развилки</span>
+    <h2>Дерево решений на пути блогера</h2>
+    <p>Где путь может свернуть и куда он ведёт. Каждая развилка сохраняется в истории сотрудничества.</p>
+  </div>
+  <div class="tree-wrap">
+    <div class="tree-scroll"><svg id="treesvg" viewBox="0 0 960 1080" role="img" aria-label="Дерево решений блогера"></svg></div>
+    <div class="legend">
+      <div><i style="border-color:var(--coral)"></i>Действие блогера в Telegram</div>
+      <div><i style="border-color:var(--sky)"></i>Действие менеджера в панели</div>
+      <div><i style="border-color:var(--gold);background:var(--gold-soft)"></i>Развилка: система или человек выбирает путь</div>
+      <div><i style="border-color:var(--sky);background:var(--sky-soft)"></i>Ожидание или возврат на шаг</div>
+      <div><i style="border-color:var(--red);background:var(--red-soft)"></i>Отказ или ограничение</div>
+      <div><i style="border-color:var(--mint);background:var(--mint-soft)"></i>Успешный финал</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== ЭТАПЫ РАССЫЛКИ ===== -->
+<section id="stages">
+  <div class="sec-head">
+    <span class="eyebrow">Рассылка по тарифам</span>
+    <h2>Как открываются этапы</h2>
+    <p>Пример из ТЗ: старт в 12:00, у тарифа 10 мест и свой интервал. Следующий этап открывается по первому событию: места заняты или вышло время.</p>
+  </div>
+  <div class="stage-box">
+    <div class="seg" role="group" aria-label="Сценарий рассылки">
+      <button type="button" id="st-timer" data-s="timer" aria-pressed="true">Места не набрались</button>
+      <button type="button" id="st-fast" data-s="fast" aria-pressed="false">Любимки заняли всё быстро</button>
+      <button type="button" id="st-full" data-s="full" aria-pressed="false">Всё заполнено на VIP</button>
+    </div>
+    <div class="tl-scroll">
+      <div class="tl">
+        <span></span>
+        <div class="axis"><span style="left:0%;transform:none">12:00</span><span style="left:25%">13:00</span><span style="left:50%">14:00</span><span style="left:75%">15:00</span><span style="left:100%;transform:translateX(-100%)">16:00</span></div>
+        <span class="lbl">Любимки</span><div class="track"><div class="bar b1" id="bar1"></div></div>
+        <span class="lbl">VIP</span><div class="track"><div class="bar b2" id="bar2"></div></div>
+        <span class="lbl">City</span><div class="track"><div class="bar b3" id="bar3"></div></div>
+      </div>
+    </div>
+    <p class="stage-note" id="stageNote"></p>
+  </div>
+</section>
+<footer>Демонстрация логики, это не работающий бот. Имена, бренды и цифры выдуманы для примера.</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ---------- дорожка ---------- */
+(function(){
+  var road=document.getElementById('road');if(!road)return;
+  var svg=road.querySelector('svg'),paths=svg.querySelectorAll('path');
+  function draw(){
+    var rb=road.getBoundingClientRect(),stops=road.querySelectorAll('.stop'),pts=[];
+    stops.forEach(function(s){var r=s.querySelector('.ico').getBoundingClientRect();pts.push([r.left-rb.left+r.width/2,r.top-rb.top+r.height/2]);});
+    var narrow=window.matchMedia('(max-width:900px)').matches,d='M'+pts[0][0]+','+pts[0][1];
+    for(var i=1;i<pts.length;i++){var a=pts[i-1],b=pts[i];
+      if(!narrow&&Math.abs(a[0]-b[0])<5&&Math.abs(a[1]-b[1])>5){var R=rb.width+40;d+=' C'+R+','+a[1]+' '+R+','+b[1]+' '+b[0]+','+b[1];}
+      else d+=' L'+b[0]+','+b[1];}
+    paths.forEach(function(p){p.setAttribute('d',d);});
+  }
+  draw();window.addEventListener('resize',draw);
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);
+})();
+
+/* ---------- helpers ---------- */
+function pill(t,c){return '<span class="pill p-'+c+'">'+t+'</span>';}
+function kv(rows){return '<dl class="kv">'+rows.map(function(r){return '<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>';}).join('')+'</dl>';}
+function card(t,badge,body){return '<div class="pcard"><div class="pc-h"><b>'+t+'</b>'+(badge||'')+'</div>'+body+'</div>';}
+function seats(t,m){return '<span class="seats"><span class="seat-bar"><i style="width:'+Math.round(t/m*100)+'%"></i></span>'+t+' из '+m+' <em>блогер не видит</em></span>';}
+function crumb(t){return '<div class="crumb">'+t+'</div>';}
+function hist(a){return '<ol class="hist">'+a.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ol>';}
+function vid(n,d){return {m:'video',n:n,d:d};}
+function img(n,d){return {m:'img',n:n,d:d};}
+
+/* ---------- сценарий «Товар» ---------- */
+var OFFER_G='<div class="offer-img og"><span>Лаванда</span><small>уходовая косметика</small></div><b>Новое предложение</b><br>Набор уходовой косметики «Лаванда».<br>Формат: Reels + 3 сторис<br>Срок: 10 дней после получения<br>Город: Москва';
+var OFFER_R='<div class="offer-img or"><span>Пенка</span><small>кафе · Патриаршие</small></div><b>Новое предложение</b><br>Ужин на двоих в кафе «Пенка».<br>Формат: Reels или пост + сторис с геометкой<br>Срок: 5 дней после визита';
+
+function gCamp(s){return {tab:'Предложения',h:crumb('Предложения › Лаванда')+card('Лаванда · уходовая косметика',pill('Активно','ok'),kv([['Тип','Получение товара'],['Этап рассылки','2 из 3: VIP, открыт в 13:00'],['Места',seats(s.seats,10)],['Получили',s.recv+' блогеров'],['Заявок',String(s.apps)],['Согласование','Обязательно']]))};}
+function gApp(s,st,c,extra){return {tab:'Заявки',h:crumb('Заявки › Лаванда')+'<div class="tbl-scroll"><table class="mini"><thead><tr><th>№</th><th>Блогер</th><th>Тариф</th><th>Статус</th></tr></thead><tbody><tr class="hl"><td>A-1042</td><td>@anna.beauty</td><td>VIP</td><td>'+pill(st,c)+'</td></tr><tr><td>A-1039</td><td>@olga_mama</td><td>VIP</td><td>'+pill('Одобрена','ok')+'</td></tr><tr><td>A-1036</td><td>@nika.daily</td><td>VIP</td><td>'+pill('Отклонена','bad')+'</td></tr></tbody></table></div>'+card('Анкета A-1042 · @anna.beauty','',kv([['Тариф, город','VIP, Москва'],['Instagram','@anna.beauty · 48,2 тыс.'],['Адрес','Москва, ул. Летняя, 5, кв. 12'],['Согласие с условиями','✓ да'],['История','6 завершённых, просрочек 0'],['Места',seats(s.seats,10)]].concat(extra||[])))};}
+function gCol(s,st,c,extra){return {tab:'Публикации',h:crumb('Публикации › Сотрудничество C-311')+card('Лаванда × @anna.beauty',pill(st,c),kv([['Тип','Получение товара'],['Трек-номер',s.track||'—'],['Крайний срок',s.dl],['Плановая дата',s.pub||'—']].concat(extra||[])))};}
+
+var G={
+ g0:{st:0,bot:[OFFER_G],kb:[['Подробнее','g0d'],['Подать заявку','g1']],pn:gCamp,hint:'Вы блогер @anna.beauty, тариф VIP. Предложение пришло в Telegram. Нажмите кнопку под ним.'},
+ g0d:{st:0,bot:['<b>Техническое задание</b><br>• Reels 30–60 секунд с распаковкой<br>• 3 сторис с отметкой @lavanda<br>• Публикация в течение 10 дней после получения<br>• Черновик Reels — на согласование менеджеру'],kb:[['Подать заявку','g1',1]],pn:gCamp,hint:'Подробности открываются в том же чате. Сколько всего мест, блогер не видит.'},
+ g1:{st:1,set:{apps:10},bot:['Проверила ✅ тариф VIP, город Москва, просрочек нет.','<b>Анкета · шаг 1 из 3</b><br>Ваш Instagram: <b>@anna.beauty</b>, 48,2 тыс. подписчиков. Всё верно?'],kb:[['Да, верно','g2'],['Изменить','g2']],pn:gCamp,hint:'Бот проверил, можно ли подать заявку, и сам подставил сохранённые данные. Блогер только подтверждает.'},
+ g2:{st:1,bot:['<b>Шаг 2 из 3</b><br>Адрес доставки: <b>Москва, ул. Летняя, 5, кв. 12</b>. Актуален?'],kb:[['Да, актуален','g3'],['Изменить','g3']],pn:gCamp,hint:'Адрес меняется, поэтому блогер подтверждает его для каждой заявки.'},
+ g3:{st:1,bot:['<b>Шаг 3 из 3</b><br>Подтвердите условия: Reels + 3 сторис, публикация в течение 10 дней после получения, черновик на согласование.'],kb:[['Согласна, отправить','g4',1]],pn:gCamp,hint:'Перед отправкой обязательные поля проверены.'},
+ g4:{st:2,bot:['Заявка <b>№A-1042</b> отправлена.<br>Статус: на рассмотрении. Ответ придёт сюда.'],pn:function(s){return gApp(s,'На рассмотрении','new');},pa:[['Одобрить','g5','ok'],['Запросить уточнение','g4q',''],['Отклонить','gx','bad']],hint:'Теперь вы менеджер. Заявка с анкетой уже в панели. Нажмите «Одобрить» или попробуйте «Запросить уточнение».'},
+ g4q:{st:2,bot:['Менеджер просит уточнить:<br><i>«Пришлите, пожалуйста, скриншот охватов сторис за неделю»</i>'],kb:[['📎 Отправить скриншот','g4r',1]],pn:function(s){return gApp(s,'Требуются уточнения','wait');},hint:'Вопрос менеджера пришёл блогеру. Ответьте за блогера.'},
+ g4r:{st:2,me:img('stats_week.png','скриншот охватов'),bot:['Спасибо, передала менеджеру.'],pn:function(s){return gApp(s,'На рассмотрении','new',[['Уточнение','📎 stats_week.png · охваты сторис 9 800']]);},pa:[['Одобрить','g5','ok'],['Отклонить','gx','bad']],hint:'Скриншот попал прямо в карточку заявки. Теперь одобрите.'},
+ gx:{st:2,end:1,bot:['В этот раз заявка не одобрена. Новые предложения будут приходить сюда.'],pn:function(s){return gApp(s,'Отклонена','bad');},hint:'Это путь отказа. Место и лимиты не тратятся. Нажмите «Начать заново», чтобы пройти путь до конца.'},
+ g5:{st:3,set:{seats:8},bot:['<b>Заявка одобрена 🎉</b><br>Вы участвуете в «Лаванде». Как только набор отправят, пришлю трек-номер.'],pn:function(s){return gCol(s,'Ожидается отправка товара','wait',[['Внести трек-номер','<span class="input">RU123456789 · СДЭК</span>'],['Места кампании',seats(s.seats,10)]]);},pa:[['Сохранить трек-номер','g6','ok']],hint:'Место занято: 8 из 10. Если два менеджера одобрят одновременно, система всё равно не даст превысить лимит. Внесите трек-номер.'},
+ g6:{st:3,set:{track:'RU123456789'},bot:['Набор отправлен 📦<br>Трек-номер: <b>RU123456789</b>. Когда получите, нажмите кнопку.'],kb:[['Посылка получена','g7',1]],pn:function(s){return gCol(s,'Товар отправлен','new');},hint:'Снова вы блогер. Посылка пришла.'},
+ g7:{st:4,bot:[function(s){return 'Отлично! Когда опубликуете?<br>Крайний срок — <b>'+s.dl+'</b>.';}],kb:[['28.10','g8'],['30.10','g8'],['02.11','g8'],['Нужен перенос','g7p']],pn:function(s){return gCol(s,'Товар получен','ok');},hint:'Блогер выбирает дату сам, но только в пределах срока. Можно попробовать «Нужен перенос».'},
+ g7p:{st:4,bot:['Запрос на перенос отправлен менеджеру.<br>Причина: «уезжаю до 03.11». Пока срок прежний — <b>02.11</b>.'],pn:function(s){return gCol(s,'Товар получен','ok',[['Запрос на перенос',pill('02.11 → 06.11','wait')+' «уезжаю до 03.11»']]);},pa:[['Перенести на 06.11','g7a','ok'],['Отказать','g7n','bad']],hint:'Сам блогер срок не меняет, решает менеджер.'},
+ g7a:{st:4,set:{dl:'06.11'},bot:['Менеджер одобрил перенос. Новый крайний срок — <b>06.11</b>.<br>Когда опубликуете?'],kb:[['04.11','g8'],['06.11','g8']],pn:function(s){return gCol(s,'Товар получен','ok',[['История сроков',hist(['02.11 → 06.11 · одобрила Мария · «уезжает до 03.11»'])]]);},hint:'Срок и напоминания пересчитаны, история изменений сохранена.'},
+ g7n:{st:4,bot:['Перенос не одобрен, срок остаётся <b>02.11</b>. Когда опубликуете?'],kb:[['30.10','g8'],['02.11','g8']],pn:function(s){return gCol(s,'Товар получен','ok');},hint:'Отказ в переносе тоже записан в историю.'},
+ g8:{st:5,pubFromLabel:1,bot:[function(s){return 'Записала дату публикации: <b>'+s.pub+'</b>.<br>Сначала пришлите черновик Reels на согласование.';}],kb:[['☁️ Отправить ссылку на черновик','g9',1]],pn:function(s){return gCol(s,'Ожидается контент','wait',[['Напоминания','за 3 дня, за 1 день и в день срока'],['Согласование','обязательно']]);},hint:'Система сама поставила напоминания. Видео тяжёлое, поэтому блогер присылает ссылку на облако. Отправьте её за блогера.'},
+ g9:{st:5,me:'☁️ disk.yandex.ru/i/lavanda_v1',bot:['Черновик <b>v1</b> у менеджера. Ответ пришлю сюда.'],pn:function(){return {tab:'Согласования',h:crumb('Согласования › Лаванда × @anna.beauty')+card('Контент на согласовании',pill('v1','wait'),'<div class="vers"><div class="ver"><div class="thumb">▶</div>v1 · ссылка на облако</div></div><div class="note">Комментарий для правок: «Добавьте отметку @lavanda в первые 3 секунды»</div>')};},pa:[['Нужны правки','g10','warn'],['Согласовать','g11','ok']],hint:'Вы менеджер. Попробуйте вернуть черновик на правки.'},
+ g10:{st:5,bot:['Нужны правки ✏️<br><i>«Добавьте отметку @lavanda в первые 3 секунды»</i>'],kb:[['☁️ Отправить исправленный','g10b',1]],pn:function(){return {tab:'Согласования',h:crumb('Согласования › Лаванда × @anna.beauty')+card('Требуются исправления',pill('ждём v2','bad'),'<div class="vers"><div class="ver old"><div class="thumb">▶</div>v1 · правки отправлены</div></div>')};},hint:'Блогер получил комментарий. Отправьте новую версию.'},
+ g10b:{st:5,me:'☁️ disk.yandex.ru/i/lavanda_v2',bot:['Версия <b>v2</b> у менеджера.'],pn:function(){return {tab:'Согласования',h:crumb('Согласования › Лаванда × @anna.beauty')+card('Контент на согласовании',pill('v2','wait'),'<div class="vers"><div class="ver"><div class="thumb">▶</div>v2 · новая</div><div class="ver old"><div class="thumb">▶</div>v1 · «отметка в первые 3 с»</div></div>')};},pa:[['Согласовать','g11','ok']],hint:'Обе версии и комментарий сохранены. Согласуйте.'},
+ g11:{st:6,bot:['<b>Контент согласован ✅</b><br>Можно публиковать. После публикации пришлите ссылку.','~ через 2 дня',function(s){return '🔔 Напоминание: публикация <b>'+s.pub+'</b>. Не забудьте прислать ссылку.';}],kb:[['🔗 Отправить ссылку','g12',1]],pn:function(s){return gCol(s,'Ожидается публикация','new',[['Контент','согласован, v2']]);},hint:'Бот сам напоминает о дате. Блогер публикует и присылает ссылку.'},
+ g12:{st:7,me:'instagram.com/reel/Cx7Lav…',bot:['Ссылка получена. Отчёт у менеджера.'],pn:function(s){return gCol(s,'Отчёт на проверке','wait',[['Ссылка','instagram.com/reel/Cx7Lav…'],['Опубликовано',s.pub]]);},pa:[['Принять отчёт','g13','ok'],['Вернуть на исправление','g12r','bad']],hint:'Менеджер открывает ссылку и проверяет публикацию.'},
+ g12r:{st:7,bot:['Менеджер просит дополнить отчёт:<br><i>«Пришлите скриншот статистики Reels через сутки»</i>'],kb:[['📎 Отправить скриншот','g12s',1]],pn:function(s){return gCol(s,'Требуются исправления отчёта','bad');},hint:'Отчёт вернулся блогеру с комментарием.'},
+ g12s:{st:7,me:img('reels_stats.png','статистика Reels'),bot:['Скриншот передан менеджеру.'],pn:function(s){return gCol(s,'Отчёт на проверке','wait',[['Ссылка','instagram.com/reel/Cx7Lav…'],['Статистика','📎 reels_stats.png']]);},pa:[['Принять отчёт','g13','ok']],hint:'Теперь примите отчёт.'},
+ g13:{st:8,end:1,bot:['<b>Сотрудничество «Лаванда» завершено</b> 🙌<br>Спасибо! Новые предложения будут приходить сюда.'],pn:function(s){return gCol(s,'Завершено','ok',[['История',hist(['19.10 заявка одобрена','20.10 товар отправлен','23.10 товар получен','25.10 черновик v1, правки','26.10 v2 согласован',s.pub+' опубликовано','отчёт принят'])]]);},hint:'Путь пройден. Все даты сохранены для отчёта бренду. Попробуйте второй сценарий — ресторан.'}
+};
+
+/* ---------- сценарий «Ресторан» ---------- */
+function rCamp(s){return {tab:'Предложения',h:crumb('Предложения › Кафе «Пенка»')+card('Кафе «Пенка» · ужин на двоих',pill('Активно','ok'),kv([['Тип','Посещение заведения'],['Этап рассылки','1 из 3: Любимки'],['Места',seats(s.seats,8)],['Лист ожидания','включён · 2 человека'],['Согласование','не нужно']]))};}
+function rApp(s,st,c){return {tab:'Заявки',h:crumb('Заявки › Кафе «Пенка»')+card('Анкета A-1057 · @kate_food',pill(st,c),kv([['Тариф, город','Любимки, Москва'],['Когда удобно',s.when||'—'],['Гостей',s.guests||'—'],['Записи в заведения','в октябре: '+s.lim+' из 2'],['Места',seats(s.seats,8)]]))+'<div class="note">Лимит записей тратится только при одобрении. Подача заявки его не трогает.</div>'};}
+function rCol(s,st,c,extra){return {tab:'Публикации',h:crumb('Публикации › Сотрудничество C-318')+card('Кафе «Пенка» × @kate_food',pill(st,c),kv([['Тип','Посещение заведения'],['Визит','24.10, 19:00'],['Крайний срок',s.dl],['Плановая дата',s.pub||'—'],['Записи в октябре',s.lim+' из 2']].concat(extra||[])))};}
+var R={
+ r0:{st:0,bot:[OFFER_R],kb:[['Подробнее','r0d'],['Подать заявку','r1']],pn:rCamp,hint:'Вы блогер @kate_food, тариф Любимки. У тарифа лимит: 2 записи в заведения в месяц.'},
+ r0d:{st:0,bot:['<b>Условия</b><br>• Ужин на двоих за счёт заведения<br>• Reels или пост + сторис с геометкой<br>• Публикация в течение 5 дней после визита<br>• Согласование не нужно'],kb:[['Подать заявку','r1',1]],pn:rCamp,hint:'Для этого предложения согласование контента выключено.'},
+ r1:{st:1,bot:['Проверила ✅ тариф Любимки, Москва, просрочек нет.<br>Записи в заведения в октябре: <b>1 из 2</b>.','<b>Анкета · шаг 1 из 2</b><br>Когда вам удобно прийти?'],kb:[['Будни вечером','r2'],['Выходные днём','r2']],pn:rCamp,hint:'Если бы лимит был исчерпан, бот сразу сказал бы об этом и не принял заявку.'},
+ r2:{st:1,whenFromLabel:1,bot:['<b>Шаг 2 из 2</b><br>Сколько будет гостей?'],kb:[['1','r3'],['2','r3']],pn:rCamp,hint:'Анкета короткая, поэтому бот спрашивает прямо в чате.'},
+ r3:{st:2,guestsFromLabel:1,bot:['Заявка <b>№A-1057</b> отправлена. Статус: на рассмотрении.'],pn:function(s){return rApp(s,'На рассмотрении','new');},pa:[['Одобрить','r4','ok'],['Отклонить','rx','bad']],hint:'Вы менеджер. Лимит записей пока 1 из 2. Одобрите заявку.'},
+ rx:{st:2,end:1,bot:['В этот раз заявка не одобрена. Лимит записей не изменился: <b>1 из 2</b>.'],pn:function(s){return rApp(s,'Отклонена','bad');},hint:'Отказ до одобрения лимит не тратит.'},
+ r4:{st:3,set:{lim:2,seats:4},bot:['<b>Заявка одобрена 🎉</b><br>Вас ждут <b>24.10 в 19:00</b>.<br>Записи в октябре: <b>2 из 2</b>.'],kb:[['Запись подтверждена','r5'],['Не смогу прийти','rc']],pn:function(s){return rCol(s,'Ожидается посещение','wait');},hint:'Лимит списался только сейчас, при одобрении. Можно попробовать «Не смогу прийти».'},
+ rc:{st:3,end:1,set:{lim:1,seats:3},bot:['Участие отменено. Лимит записей восстановлен: <b>1 из 2</b>.'],pn:function(s){return {tab:'Публикации',h:rCol(s,'Отменено блогером','bad',[['Лимит','списан 19.10 → возвращён 19.10']]).h+card('Лист ожидания',pill('авто','new'),'<div class="tbl-scroll"><table class="mini"><thead><tr><th>#</th><th>Блогер</th><th>Статус</th></tr></thead><tbody><tr class="hl"><td>1</td><td>@lena_eats</td><td>'+pill('Приглашена · ответ до 21:00','wait')+'</td></tr><tr><td>2</td><td>@max.food</td><td>'+pill('В очереди','mut')+'</td></tr></tbody></table></div>')};},hint:'Место вернулось, и система сама предложила его следующему из листа ожидания. Менеджер может поменять порядок вручную.'},
+ r5:{st:3,bot:['Ждём вас 24.10 в 19:00. После визита нажмите кнопку.'],kb:[['Посещение состоялось','r6',1]],pn:function(s){return rCol(s,'Запись подтверждена','new');},hint:'Блогер сходил в кафе.'},
+ r6:{st:4,bot:['Как прошло? Когда опубликуете?<br>Крайний срок — <b>29.10</b>.'],kb:[['26.10','r7'],['29.10','r7']],pn:function(s){return rCol(s,'Посещение подтверждено','ok');},hint:'Срок считается от даты визита.'},
+ r7:{st:6,pubFromLabel:1,bot:[function(s){return 'Записала: <b>'+s.pub+'</b>. Согласование не нужно. Публикуйте и присылайте ссылку.';}],kb:[['🔗 Отправить ссылку','r9'],['⏩ Пропустить срок (демо)','r8']],pn:function(s){return rCol(s,'Ожидается публикация','new',[['Напоминания','за 3 дня, за 1 день и в день срока']]);},hint:'Шаг «Контент» пропущен. Чтобы увидеть, как работает просрочка, нажмите «Пропустить срок».'},
+ r8:{st:6,bot:['~ 26.10','🔔 До крайнего срока 3 дня. Не забудьте прислать ссылку.','~ 28.10','🔔 Завтра крайний срок публикации.','~ 30.10','⚠️ <b>Срок публикации прошёл.</b><br>Новые заявки закрыты, пока вы не пришлёте ссылку на обзор «Пенки».'],kb:[['🔗 Отправить ссылку','r9',1]],pn:function(s){return {tab:'Публикации',h:rCol(s,'Ожидается публикация','new',[['Просрочка',pill('Просрочено на 1 день','bad')],['Блогер','новые заявки закрыты автоматически']]).h};},pa:[['Снять ограничение с причиной','r8m','']],hint:'Система сама напомнила, отметила просрочку и закрыла новые заявки. Этап сотрудничества сохранился: «ожидается публикация».'},
+ r8m:{st:6,bot:['Менеджер снял ограничение. Пришлите ссылку до <b>01.11</b>.'],kb:[['🔗 Отправить ссылку','r9',1]],pn:function(s){return rCol(s,'Ожидается публикация','new',[['Просрочка',pill('Ограничение снято','mut')],['Журнал','Мария, 30.10: «болела, договорились до 01.11»']]);},hint:'Снять ограничение можно только с причиной, действие попадает в журнал.'},
+ r9:{st:7,me:'instagram.com/p/Penka24…',bot:['Ссылка получена. Отчёт у менеджера.'],pn:function(s){return rCol(s,'Отчёт на проверке','wait',[['Ссылка','instagram.com/p/Penka24…']]);},pa:[['Принять отчёт','r10','ok']],hint:'Менеджер проверяет публикацию по ссылке.'},
+ r10:{st:8,end:1,bot:['<b>Сотрудничество с «Пенкой» завершено</b> 🙌<br>Новые заявки снова открыты.'],pn:function(s){return rCol(s,'Завершено','ok');},hint:'Сотрудничество ушло из счётчиков неопубликованных и просроченных.'}
+};
+
+var SC={g:{nodes:G,start:'g0',who:'Блогер @anna.beauty · VIP',skip:[],s3:'Товар',init:{seats:7,recv:46,apps:9,dl:'02.11'}},
+        r:{nodes:R,start:'r0',who:'Блогер @kate_food · Любимки',skip:[5],s3:'Визит',init:{seats:3,lim:1,dl:'29.10'}}};
+var STAGES=['Предложение','Заявка','Решение','Получение','Дата','Контент','Публикация','Отчёт','Готово'];
+var TABS=['Главная','Предложения','Заявки','Согласования','Публикации','Блогеры','Отчёты'];
+
+var chat=document.getElementById('chat'),pnside=document.getElementById('pnside'),pnmain=document.getElementById('pnmain'),
+    prog=document.getElementById('progress'),hint=document.getElementById('hint'),turn=document.getElementById('turn'),who=document.getElementById('who');
+var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var cur,st,busy=false,run=0,clock;
+
+function tm(){clock+=3;var h=12+Math.floor(clock/60),m=clock%60;return h+':'+(m<10?'0':'')+m;}
+function scroll(){chat.scrollTop=chat.scrollHeight;}
+function addBubble(cls,html){var d=document.createElement('div');d.className='bb '+cls;d.innerHTML=html+'<span class="tm">'+tm()+'</span>';chat.appendChild(d);scroll();}
+function addMe(me){
+  if(typeof me==='string'){addBubble('me',me);return;}
+  if(me.m==='video')addBubble('me','<div class="thumb">▶</div><div class="fname">'+me.n+' · '+me.d+'</div>');
+  else addBubble('me','<div class="thumb img">🖼 '+me.d+'</div><div class="fname">'+me.n+'</div>');
+}
+function renderProgress(i){
+  var sc=SC[cur];prog.innerHTML=STAGES.map(function(n,k){
+    var lbl=k===3?sc.s3:n,cls=sc.skip.indexOf(k)>-1?'skip':(k<i?'done':(k===i?'cur':''));
+    if(k===8&&i===8)cls='done';
+    return '<div class="pg '+cls+'"><i>'+(cls==='done'?'✓':k+1)+'</i>'+lbl+'</div>';}).join('');
+}
+function renderPanel(n){
+  var p=n.pn?n.pn(st):{tab:'Главная',h:''};
+  pnside.innerHTML='<div class="me"><span class="av m">М</span><div>Мария<small>Москва · Лаванда, Пенка</small></div></div>'+
+    TABS.map(function(t){var badge=(t===p.tab&&n.pa&&n.pa.length)?'<em>1</em>':'';return '<span class="t'+(t===p.tab?' on':'')+'">'+t+badge+'</span>';}).join('');
+  var acts='';
+  if(n.pa&&n.pa.length){acts='<div class="pacts live">'+n.pa.map(function(a){return '<button type="button" class="a-'+(a[2]||'n')+'" data-go="'+a[1]+'">'+a[0]+'</button>';}).join('')+'</div>';}
+  pnmain.innerHTML=p.h+acts;
+  pnmain.classList.remove('flash');void pnmain.offsetWidth;pnmain.classList.add('flash');
+}
+function setTurn(n){
+  if(n.end){turn.className='turn e';turn.textContent='Готово';}
+  else if(n.pa&&n.pa.length){turn.className='turn m';turn.textContent='Ход менеджера';}
+  else{turn.className='turn b';turn.textContent='Ход блогера';}
+  hint.textContent=n.hint||'';
+}
+function go(id,label){
+  var my=++run;var n=SC[cur].nodes[id];busy=true;
+  chat.querySelectorAll('.ikb').forEach(function(k){k.classList.add('used');k.classList.remove('live');});
+  pnmain.querySelectorAll('.pacts').forEach(function(p){p.remove();});
+  if(n.set)for(var k in n.set)st[k]=n.set[k];
+  if(n.pubFromLabel&&label)st.pub=label;
+  if(n.whenFromLabel&&label)st.when=label;
+  if(n.guestsFromLabel&&label)st.guests=label;
+  if(label!==null){addMe(n.me!==undefined?n.me:label);}
+  else if(n.me!==undefined){addMe(n.me);}
+  renderProgress(n.st);
+  renderPanel(n);
+  var msgs=n.bot.slice(),i=0;
+  function next(){
+    if(my!==run)return;
+    if(i>=msgs.length){finish();return;}
+    var m=msgs[i++];if(typeof m==='function')m=m(st);
+    if(m.charAt(0)==='~'){var s=document.createElement('div');s.className='sep';s.textContent=m.slice(1).trim();chat.appendChild(s);scroll();setTimeout(next,reduce?0:250);return;}
+    if(reduce){addBubble('bot',m);next();return;}
+    var t=document.createElement('div');t.className='typing';t.innerHTML='<span></span><span></span><span></span>';chat.appendChild(t);scroll();
+    setTimeout(function(){if(my!==run)return;t.remove();addBubble('bot',m);setTimeout(next,180);},520);
+  }
+  function finish(){
+    if(n.kb&&n.kb.length){
+      var kb=document.createElement('div');kb.className='ikb'+((n.pa&&n.pa.length)?'':' live');
+      n.kb.forEach(function(b){var e=document.createElement('button');e.type='button';e.textContent=b[0];e.dataset.go=b[1];if(b[2]||n.kb.length===1||b[0].length>16)e.className='full';kb.appendChild(e);});
+      chat.appendChild(kb);scroll();
+    }
+    if(n.end){var e=document.createElement('div');e.className='ikb live';e.innerHTML='<button type="button" class="full" data-restart="1">↺ Пройти ещё раз</button>';chat.appendChild(e);scroll();}
+    setTurn(n);busy=false;
+  }
+  setTurn(n);hint.textContent='…';
+  setTimeout(next,label===null&&!n.me?(reduce?0:250):(reduce?0:300));
+}
+function start(sc){
+  cur=sc;run++;clock=0;st=JSON.parse(JSON.stringify(SC[sc].init));
+  chat.innerHTML='<div class="sep">сегодня</div>';who.textContent=SC[sc].who;
+  document.querySelectorAll('#try .seg button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.sc===sc?'true':'false');});
+  go(SC[sc].start,null);
+}
+chat.addEventListener('click',function(e){var b=e.target.closest('button');if(!b||busy)return;
+  if(b.dataset.restart){start(cur);return;}
+  if(b.closest('.ikb.used'))return;go(b.dataset.go,b.textContent);});
+pnmain.addEventListener('click',function(e){var b=e.target.closest('button[data-go]');if(!b||busy)return;go(b.dataset.go,null);});
+document.querySelectorAll('#try .seg button').forEach(function(b){b.addEventListener('click',function(){start(b.dataset.sc);});});
+document.getElementById('restart').addEventListener('click',function(){start(cur);});
+start('g');
+
+
+/* ---------- дерево ---------- */
+var W=250,H=56,L=170,C=480,Rr=790;
+var TN={
+ n1:[C,20,'k-b',['Блогер получил предложение']],
+ d1:[C,110,'k-d',['Проходит проверки?']],
+ x1:[L,110,'k-bad',['Нет: бот пишет причину','тариф, лимит, просрочка']],
+ n2:[C,200,'k-b',['Заполняет анкету']],
+ d2:[C,290,'k-d',['Есть свободные места?']],
+ w1:[Rr,290,'k-w',['Лист ожидания','очередь по времени']],
+ n3:[C,380,'k-m',['Менеджер рассматривает']],
+ x2:[L,380,'k-bad',['Отказ','лимит не тратится']],
+ w2:[Rr,380,'k-w',['Уточнение','блогер дополняет анкету']],
+ d3:[C,470,'k-d',['Тип предложения?']],
+ a1:[L,560,'k-b',['Товар: трек-номер →','«Посылка получена»']],
+ a2:[Rr,560,'k-b',['Заведение: запись →','«Посещение состоялось»']],
+ n4:[C,650,'k-b',['Выбирает дату публикации']],
+ w3:[Rr,650,'k-w',['Перенос даты','решает менеджер']],
+ x3:[L,650,'k-bad',['Отказался после одобрения','место и лимит вернулись']],
+ d4:[C,740,'k-d',['Нужно согласование?']],
+ a3:[L,830,'k-b',['Черновик → правки →','«Согласовано»']],
+ n5:[C,920,'k-b',['Публикует и шлёт ссылку']],
+ x4:[Rr,920,'k-bad',['Срок прошёл: «Просрочено»','новые заявки закрыты']],
+ ok:[C,1010,'k-ok',['Менеджер принял отчёт','Завершено']]
+};
+function pt(id,side){var n=TN[id],x=n[0],y=n[1];
+  if(side==='t')return[x,y];if(side==='b')return[x,y+H];if(side==='l')return[x-W/2,y+H/2];if(side==='r')return[x+W/2,y+H/2];
+  if(side==='tr')return[x+W/2-40,y];if(side==='br')return[x+W/2-40,y+H];if(side==='bl')return[x-W/2+40,y+H];if(side==='tl')return[x-W/2+40,y];}
+var TE=[
+ ['n1','b','d1','t',''],['d1','l','x1','r','нет'],['d1','b','n2','t','да'],['n2','b','d2','t',''],
+ ['d2','r','w1','l','нет'],['d2','b','n3','t','да'],['w1','b','n3','tr','место освободилось',1],
+ ['n3','l','x2','r','отказ'],['n3','r','w2','l','уточнить'],['w2','bl','n3','br','',1],['n3','b','d3','t','одобрено'],
+ ['d3','l','a1','t','товар'],['d3','r','a2','t','заведение'],['a1','r','n4','t',''],['a2','l','n4','t',''],
+ ['n4','r','w3','l','',1],['n4','l','x3','r','отказался',1],['n4','b','d4','t',''],
+ ['d4','l','a3','t','да'],['a3','b','n5','l',''],['d4','b','n5','t','нет'],
+ ['n5','r','x4','l','не успел',1],['x4','b','ok','r','прислал ссылку',1],['n5','b','ok','t','']
+];
+var svg=document.getElementById('treesvg'),NS='http://www.w3.org/2000/svg',out='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrowhead" d="M0,0 L10,5 L0,10 z"/></marker></defs>';
+TE.forEach(function(e){var a=pt(e[0],e[1]),b=pt(e[2],e[3]),d;
+  if(e[1]==='b'&&(e[3]==='l'||e[3]==='r'))d='M'+a[0]+','+a[1]+' L'+a[0]+','+b[1]+' L'+b[0]+','+b[1];
+  else if((e[1]==='l'||e[1]==='r')&&e[3]==='t')d='M'+a[0]+','+a[1]+' L'+b[0]+','+a[1]+' L'+b[0]+','+b[1];
+  else if(e[1]==='bl'&&e[3]==='br')d='M'+a[0]+','+a[1]+' C'+a[0]+','+(a[1]+40)+' '+b[0]+','+(b[1]+40)+' '+b[0]+','+b[1];
+  else d='M'+a[0]+','+a[1]+' L'+b[0]+','+b[1];
+  out+='<path class="te'+(e[5]?' d':'')+'" d="'+d+'" marker-end="url(#ah)"/>';
+  if(e[4]){var lx,ly;
+    if(e[1]==='l'||e[1]==='r'){lx=(a[0]+(e[3]==='t'?b[0]:b[0]))/2;ly=a[1]-7;}
+    else if(e[1]==='b'&&(e[3]==='l'||e[3]==='r')){lx=a[0]+6;ly=(a[1]+b[1])/2;}
+    else {lx=(a[0]+b[0])/2+8;ly=(a[1]+b[1])/2+4;}
+    out+='<text class="tl-lbl" x="'+lx+'" y="'+ly+'" text-anchor="'+((e[1]==='b'&&(e[3]==='l'||e[3]==='r'))||!(e[1]==='l'||e[1]==='r')?'start':'middle')+'">'+e[4]+'</text>';}
+});
+Object.keys(TN).forEach(function(id){var n=TN[id],x=n[0]-W/2,y=n[1],lines=n[3];
+  out+='<g class="tn '+n[2]+'"><rect x="'+x+'" y="'+y+'" width="'+W+'" height="'+H+'" rx="'+(n[2]==='k-d'?28:12)+'"/>';
+  lines.forEach(function(t,i){var ty=y+H/2+(lines.length===1?5:(i===0?-4:14));out+='<text x="'+n[0]+'" y="'+ty+'" text-anchor="middle"'+(i>0?' style="font-weight:400;font-size:12.5px;fill:var(--muted)"':'')+'>'+t+'</text>';});
+  out+='</g>';});
+svg.innerHTML=out;
+
+/* ---------- этапы рассылки ---------- */
+var S={
+ timer:{b:[[0,25,'10 мест · занято 7'],[25,50,'VIP + 3 места с прошлого этапа'],[75,25,'City']],n:'<b>Час прошёл, а одобрено 7 из 10.</b> В 13:00 открывается VIP. Если в настройках разрешено, 3 незанятых места переходят дальше. Через два часа открывается City.'},
+ fast:{b:[[0,9,'10/10'],[9,50,'VIP открылся сразу'],[59,25,'City']],n:'<b>Любимки заняли все 10 мест за 20 минут.</b> VIP открывается сразу, не дожидаясь 13:00. Время следующих этапов считается от этого момента.'},
+ full:{b:[[0,25,'10/10'],[25,30,'общий лимит набран'],[0,0,'']],n:'<b>Общее число мест набрано на этапе VIP.</b> Рассылка останавливается, City предложение не получает. Блогеры количество мест не видят.'}
+};
+var bars=[document.getElementById('bar1'),document.getElementById('bar2'),document.getElementById('bar3')],note=document.getElementById('stageNote');
+function showS(k){S[k].b.forEach(function(d,i){bars[i].style.left=d[0]+'%';bars[i].style.width=d[1]+'%';bars[i].textContent=d[2];bars[i].hidden=!d[1];});
+  note.innerHTML=S[k].n;document.querySelectorAll('#stages .seg button').forEach(function(t){t.setAttribute('aria-pressed',t.dataset.s===k?'true':'false');});}
+document.querySelectorAll('#stages .seg button').forEach(function(t){t.addEventListener('click',function(){showS(t.dataset.s);});});
+showS('timer');
+
+})();
+</script>
+</body>
+</html>

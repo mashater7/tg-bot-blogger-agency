@@ -4,6 +4,8 @@
 
 **Открыть страницу:** https://mashater7.github.io/tg-bot-blogger-agency/
 
+**Короткая версия:** https://mashater7.github.io/tg-bot-blogger-agency/short/
+
 На странице:
 - простая схема «дорожка от подарка до поста»;
 - живой прототип: Telegram блогера и панель менеджера работают вместе;
