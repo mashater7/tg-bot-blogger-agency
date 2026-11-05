@@ -15,7 +15,7 @@ var OFFER_R='<div class="offer-img or"><span>Пенка</span><small>кафе ·
 
 function gCamp(s){return {tab:'Предложения',h:crumb('Предложения › Лаванда')+card('Лаванда · уходовая косметика',pill('Активно','ok'),kv([['Тип','Получение товара'],['Этап рассылки','2 из 3: VIP, открыт в 13:00'],['Места',seats(s.seats,10)],['Получили',s.recv+' блогеров'],['Заявок',String(s.apps)],['Согласование','Обязательно']]))};}
 function gApp(s,st,c,extra){return {tab:'Заявки',h:crumb('Заявки › Лаванда')+'<div class="tbl-scroll"><table class="mini"><thead><tr><th>№</th><th>Блогер</th><th>Тариф</th><th>Статус</th></tr></thead><tbody><tr class="hl"><td>A-1042</td><td>@anna.beauty</td><td>VIP</td><td>'+pill(st,c)+'</td></tr><tr><td>A-1039</td><td>@olga_mama</td><td>VIP</td><td>'+pill('Одобрена','ok')+'</td></tr><tr><td>A-1036</td><td>@nika.daily</td><td>VIP</td><td>'+pill('Отклонена','bad')+'</td></tr></tbody></table></div>'+card('Анкета A-1042 · @anna.beauty','',kv([['Тариф, город','VIP, Москва'],['Instagram','@anna.beauty · 48,2 тыс.'],['Адрес','Москва, ул. Летняя, 5, кв. 12'],['Согласие с условиями','✓ да'],['История','6 завершённых, просрочек 0'],['Места',seats(s.seats,10)]].concat(extra||[])))};}
-function gCol(s,st,c,extra){return {tab:'Публикации',h:crumb('Публикации › Сотрудничество C-311')+card('Лаванда × @anna.beauty',pill(st,c),kv([['Тип','Получение товара'],['Трек-номер',s.track||'—'],['Крайний срок',s.dl],['Плановая дата',s.pub||'—']].concat(extra||[])))};}
+function gCol(s,st,c,extra){return {tab:'Публикации',h:crumb('Публикации › Сотрудничество C-311')+card('Лаванда × @anna.beauty',pill(st,c),kv([['Тип','Получение товара'],['Трек-номер',esc(s.track||'—')],['Крайний срок',s.dl],['Плановая дата',s.pub||'—']].concat(extra||[])))};}
 
 var G={
  g0:{st:0,bot:[OFFER_G],kb:[['Подробнее','g0d'],['Подать заявку','g1']],pn:gCamp,hint:'Вы блогер @anna.beauty, тариф VIP. Предложение пришло в Telegram. Нажмите кнопку под ним.'},
@@ -131,10 +131,10 @@ function currentPanel(){
  var h=node().pn(st).h;
  if(currentNode==='g5')h=h.replace('<span class="input">RU123456789 · СДЭК</span>',
   '<label class="sr-only" for="track-input">Трек-номер</label><input id="track-input" class="demo-field" value="'+esc(st.track||'RU123456789')+'" maxlength="60">');
- if(st.address)h=h.replace('Москва, ул. Летняя, 5, кв. 12',esc(st.address));
- if(st.social)h=h.replace('@anna.beauty · 48,2 тыс.',esc(st.social)+' · 48,2 тыс.');
- if(st.draftUrl)h=h.replace(/ссылка на облако/g,esc(st.draftUrl));
- if(st.reportUrl)h=h.replace(/instagram.com\/(reel\/Cx7Lav…|p\/Penka24…)/g,esc(st.reportUrl));
+ if(st.address)h=h.replace('Москва, ул. Летняя, 5, кв. 12',function(){return esc(st.address);});
+ if(st.social)h=h.replace('@anna.beauty · 48,2 тыс.',function(){return esc(st.social)+' · 48,2 тыс.';});
+ if(st.draftUrl)h=h.replace(/ссылка на облако/g,function(){return esc(st.draftUrl);});
+ if(st.reportUrl)h=h.replace(/instagram.com\/(reel\/Cx7Lav…|p\/Penka24…)/g,function(){return esc(st.reportUrl);});
  if(cur==='g'&&st.draftVersion===1)h=h.replace(/согласован, v2/g,'согласован, v1');
  return h+actions();
 }
@@ -221,7 +221,7 @@ function closeView(focus){
 function back(){var previous=viewStack.pop()||'chat';if(previous==='chat')closeView();else openView(previous,false);}
 function edit(field,next){activeEdit={field:field,next:next||null};openView('edit');}
 function updateTranscript(html){
- return html.replace(/Москва, ул\. Летняя, 5, кв\. 12/g,esc(st.address)).replace(/@anna\.beauty<\/b>/g,esc(st.social)+'</b>').replace(/RU123456789/g,esc(st.track||'RU123456789'));
+ return html.replace(/Москва, ул\. Летняя, 5, кв\. 12/g,function(){return esc(st.address);}).replace(/@anna\.beauty<\/b>/g,function(){return esc(st.social)+'</b>';}).replace(/RU123456789/g,function(){return esc(st.track||'RU123456789');});
 }
 function go(id,label){
  var n=SC[cur].nodes[id];if(!n)return;
@@ -261,6 +261,11 @@ function start(sc,reset){
 function sendText(text){
  if(!text.trim()){announce('Введите сообщение.');input.focus();return;}
  closeView(false);
+ if(contactMode){
+  addMe(esc(text));contactMode=false;
+  addBubble('bot','Демо: сообщение для Марии записано в этой переписке. Реальному менеджеру ничего не отправлено.');
+  announce('Демонстрационное сообщение менеджеру добавлено в чат.');return;
+ }
  if(/^\/(start|menu)$/i.test(text.trim())){openView('menu');return;}
  if(/^\/help$/i.test(text.trim())){openView('help');return;}
  if(/^\/offers$/i.test(text.trim())){openView('offers');return;}
@@ -268,8 +273,7 @@ function sendText(text){
  if(link&&['g8','g10'].indexOf(currentNode)>-1){st.draftUrl=text.trim();go(currentNode==='g8'?'g9':'g10b',null);input.focus({preventScroll:true});return;}
  if(link&&['g11','r7','r8','r8m'].indexOf(currentNode)>-1){st.reportUrl=text.trim();go(cur==='g'?'g12':'r9',null);input.focus({preventScroll:true});return;}
  addMe(esc(text));
- if(contactMode){addBubble('bot','Демо: сообщение для Марии записано в этой переписке. Реальному менеджеру ничего не отправлено.');contactMode=false;}
- else addBubble('bot','В демо можно пройти сценарий кнопками, прислать ссылку на черновик или публикацию на соответствующем шаге. Откройте «Меню», чтобы посмотреть разделы. Сообщение осталось только здесь.');
+ addBubble('bot','В демо можно пройти сценарий кнопками, прислать ссылку на черновик или публикацию на соответствующем шаге. Откройте «Меню», чтобы посмотреть разделы. Сообщение осталось только здесь.');
  announce('Демонстрационный ответ добавлен в чат.');
 }
 function attach(kind){
