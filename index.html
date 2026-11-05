@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<link rel="icon" href="data:,">
 </head>
 <body>
 <title>Бот для блогеров агентства</title>
@@ -365,6 +366,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 }
 </style>
 
+<link rel="stylesheet" href="assets/iphone-demo.css">
 <div class="wrap">
 
 <!-- ===== ЭКОСИСТЕМА ===== -->
@@ -465,7 +467,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
   <div class="sec-head">
     <span class="eyebrow">Попробуйте сами</span>
     <h2>Живой прототип: блогер и менеджер одновременно</h2>
-    <p>Слева Telegram блогера, справа панель менеджера. Нажимайте подсвеченные кнопки: действие блогера сразу появляется в панели, решение менеджера приходит блогеру в чат. Это демонстрация, данные выдуманы.</p>
+    <p>Слева Telegram блогера, справа панель менеджера. Откройте меню, изучите разделы или пройдите сотрудничество: действия блогера появляются у менеджера, решения возвращаются в чат. Всё работает только внутри этой презентации, данные выдуманы.</p>
   </div>
 
   <div class="sim">
@@ -479,13 +481,28 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
     <div class="progress-scroll"><div class="progress" id="progress"></div></div>
     <div class="hintbar" aria-live="polite"><span class="turn b" id="turn">Ход блогера</span><span class="hint" id="hint"></span></div>
 
-    <div class="sim-body">
+    <p id="demo-disclosure" class="demo-disclosure">Интерактивное демо · сообщения и изменения остаются в этой вкладке. Переключение сценария сохраняет прогресс, «Начать заново» сбрасывает только выбранный сценарий.</p><div id="demo-status" class="sr-only" role="status"></div><div class="sim-body">
       <div>
         <div class="side-label"><i style="background:var(--coral)"></i><span id="who">Блогер</span></div>
-        <div class="tgp">
-          <div class="tgp-head"><span class="av">К</span><div><b>Агентство · Коллаборации</b><small>бот</small></div></div>
-          <div class="tgp-chat" id="chat"></div>
-          <div class="tgp-input"><span class="menu">☰ Меню</span><span>Сообщение</span></div>
+        <div class="tgp" aria-label="Демонстрация Telegram на iPhone">
+          <div class="ios-status" aria-hidden="true"><span>9:41</span><span class="island"></span><span>▮▮▮ &nbsp;◔ ▰</span></div>
+          <header class="tgp-head">
+            <button type="button" class="ios-back" id="phone-back" aria-label="Назад к чатам">‹</button>
+            <button type="button" class="bot-heading" data-view="about"><b>Коллаборации</b><small>бот · демо агентства</small></button>
+            <button type="button" class="av" data-view="about" aria-label="О боте агентства">К</button>
+          </header>
+          <div class="phone-content">
+            <div class="tgp-chat" id="chat" role="region" aria-label="Переписка с ботом" tabindex="0"></div>
+            <section id="phone-view" class="phone-view" aria-label="Раздел бота" hidden></section>
+          </div>
+          <form class="tgp-input" id="composer" autocomplete="off">
+            <button type="button" class="menu" id="bot-menu" aria-controls="phone-view" aria-expanded="false">☰ Меню</button>
+            <button type="button" class="attach" data-view="attach" aria-label="Прикрепить демоматериал">＋</button>
+            <label class="sr-only" for="message-input">Сообщение боту в демо</label>
+            <input id="message-input" name="message" placeholder="Сообщение" maxlength="500" aria-describedby="demo-disclosure" />
+            <button type="submit" class="send" aria-label="Отправить сообщение в демо">↑</button>
+          </form>
+          <div class="ios-home" aria-hidden="true"><i></i></div>
         </div>
       </div>
       <div style="min-width:0">
@@ -493,8 +510,8 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
         <div class="pn">
           <div class="pn-bar"><i></i><i></i><i></i>&nbsp; panel.agency.ru</div>
           <div class="pn-grid">
-            <nav class="pn-side" id="pnside"></nav>
-            <div class="pn-main" id="pnmain"></div>
+            <nav class="pn-side" id="pnside" aria-label="Разделы панели менеджера"></nav>
+            <div class="pn-main" id="pnmain" tabindex="-1" aria-label="Рабочая область менеджера"></div>
           </div>
         </div>
       </div>
@@ -923,158 +940,7 @@ footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);paddin
 })();
 
 /* ---------- helpers ---------- */
-function pill(t,c){return '<span class="pill p-'+c+'">'+t+'</span>';}
-function kv(rows){return '<dl class="kv">'+rows.map(function(r){return '<dt>'+r[0]+'</dt><dd>'+r[1]+'</dd>';}).join('')+'</dl>';}
-function card(t,badge,body){return '<div class="pcard"><div class="pc-h"><b>'+t+'</b>'+(badge||'')+'</div>'+body+'</div>';}
-function seats(t,m){return '<span class="seats"><span class="seat-bar"><i style="width:'+Math.round(t/m*100)+'%"></i></span>'+t+' из '+m+' <em>блогер не видит</em></span>';}
-function crumb(t){return '<div class="crumb">'+t+'</div>';}
-function hist(a){return '<ol class="hist">'+a.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ol>';}
-function vid(n,d){return {m:'video',n:n,d:d};}
-function img(n,d){return {m:'img',n:n,d:d};}
 
-/* ---------- сценарий «Товар» ---------- */
-var OFFER_G='<div class="offer-img og"><span>Лаванда</span><small>уходовая косметика</small></div><b>Новое предложение</b><br>Набор уходовой косметики «Лаванда».<br>Формат: Reels + 3 сторис<br>Срок: 10 дней после получения<br>Город: Москва';
-var OFFER_R='<div class="offer-img or"><span>Пенка</span><small>кафе · Патриаршие</small></div><b>Новое предложение</b><br>Ужин на двоих в кафе «Пенка».<br>Формат: Reels или пост + сторис с геометкой<br>Срок: 5 дней после визита';
-
-function gCamp(s){return {tab:'Предложения',h:crumb('Предложения › Лаванда')+card('Лаванда · уходовая косметика',pill('Активно','ok'),kv([['Тип','Получение товара'],['Этап рассылки','2 из 3: VIP, открыт в 13:00'],['Места',seats(s.seats,10)],['Получили',s.recv+' блогеров'],['Заявок',String(s.apps)],['Согласование','Обязательно']]))};}
-function gApp(s,st,c,extra){return {tab:'Заявки',h:crumb('Заявки › Лаванда')+'<div class="tbl-scroll"><table class="mini"><thead><tr><th>№</th><th>Блогер</th><th>Тариф</th><th>Статус</th></tr></thead><tbody><tr class="hl"><td>A-1042</td><td>@anna.beauty</td><td>VIP</td><td>'+pill(st,c)+'</td></tr><tr><td>A-1039</td><td>@olga_mama</td><td>VIP</td><td>'+pill('Одобрена','ok')+'</td></tr><tr><td>A-1036</td><td>@nika.daily</td><td>VIP</td><td>'+pill('Отклонена','bad')+'</td></tr></tbody></table></div>'+card('Анкета A-1042 · @anna.beauty','',kv([['Тариф, город','VIP, Москва'],['Instagram','@anna.beauty · 48,2 тыс.'],['Адрес','Москва, ул. Летняя, 5, кв. 12'],['Согласие с условиями','✓ да'],['История','6 завершённых, просрочек 0'],['Места',seats(s.seats,10)]].concat(extra||[])))};}
-function gCol(s,st,c,extra){return {tab:'Публикации',h:crumb('Публикации › Сотрудничество C-311')+card('Лаванда × @anna.beauty',pill(st,c),kv([['Тип','Получение товара'],['Трек-номер',s.track||'—'],['Крайний срок',s.dl],['Плановая дата',s.pub||'—']].concat(extra||[])))};}
-
-var G={
- g0:{st:0,bot:[OFFER_G],kb:[['Подробнее','g0d'],['Подать заявку','g1']],pn:gCamp,hint:'Вы блогер @anna.beauty, тариф VIP. Предложение пришло в Telegram. Нажмите кнопку под ним.'},
- g0d:{st:0,bot:['<b>Техническое задание</b><br>• Reels 30–60 секунд с распаковкой<br>• 3 сторис с отметкой @lavanda<br>• Публикация в течение 10 дней после получения<br>• Черновик Reels — на согласование менеджеру'],kb:[['Подать заявку','g1',1]],pn:gCamp,hint:'Подробности открываются в том же чате. Сколько всего мест, блогер не видит.'},
- g1:{st:1,set:{apps:10},bot:['Проверила ✅ тариф VIP, город Москва, просрочек нет.','<b>Анкета · шаг 1 из 3</b><br>Ваш Instagram: <b>@anna.beauty</b>, 48,2 тыс. подписчиков. Всё верно?'],kb:[['Да, верно','g2'],['Изменить','g2']],pn:gCamp,hint:'Бот проверил, можно ли подать заявку, и сам подставил сохранённые данные. Блогер только подтверждает.'},
- g2:{st:1,bot:['<b>Шаг 2 из 3</b><br>Адрес доставки: <b>Москва, ул. Летняя, 5, кв. 12</b>. Актуален?'],kb:[['Да, актуален','g3'],['Изменить','g3']],pn:gCamp,hint:'Адрес меняется, поэтому блогер подтверждает его для каждой заявки.'},
- g3:{st:1,bot:['<b>Шаг 3 из 3</b><br>Подтвердите условия: Reels + 3 сторис, публикация в течение 10 дней после получения, черновик на согласование.'],kb:[['Согласна, отправить','g4',1]],pn:gCamp,hint:'Перед отправкой обязательные поля проверены.'},
- g4:{st:2,bot:['Заявка <b>№A-1042</b> отправлена.<br>Статус: на рассмотрении. Ответ придёт сюда.'],pn:function(s){return gApp(s,'На рассмотрении','new');},pa:[['Одобрить','g5','ok'],['Запросить уточнение','g4q',''],['Отклонить','gx','bad']],hint:'Теперь вы менеджер. Заявка с анкетой уже в панели. Нажмите «Одобрить» или попробуйте «Запросить уточнение».'},
- g4q:{st:2,bot:['Менеджер просит уточнить:<br><i>«Пришлите, пожалуйста, скриншот охватов сторис за неделю»</i>'],kb:[['📎 Отправить скриншот','g4r',1]],pn:function(s){return gApp(s,'Требуются уточнения','wait');},hint:'Вопрос менеджера пришёл блогеру. Ответьте за блогера.'},
- g4r:{st:2,me:img('stats_week.png','скриншот охватов'),bot:['Спасибо, передала менеджеру.'],pn:function(s){return gApp(s,'На рассмотрении','new',[['Уточнение','📎 stats_week.png · охваты сторис 9 800']]);},pa:[['Одобрить','g5','ok'],['Отклонить','gx','bad']],hint:'Скриншот попал прямо в карточку заявки. Теперь одобрите.'},
- gx:{st:2,end:1,bot:['В этот раз заявка не одобрена. Новые предложения будут приходить сюда.'],pn:function(s){return gApp(s,'Отклонена','bad');},hint:'Это путь отказа. Место и лимиты не тратятся. Нажмите «Начать заново», чтобы пройти путь до конца.'},
- g5:{st:3,set:{seats:8},bot:['<b>Заявка одобрена 🎉</b><br>Вы участвуете в «Лаванде». Как только набор отправят, пришлю трек-номер.'],pn:function(s){return gCol(s,'Ожидается отправка товара','wait',[['Внести трек-номер','<span class="input">RU123456789 · СДЭК</span>'],['Места кампании',seats(s.seats,10)]]);},pa:[['Сохранить трек-номер','g6','ok']],hint:'Место занято: 8 из 10. Если два менеджера одобрят одновременно, система всё равно не даст превысить лимит. Внесите трек-номер.'},
- g6:{st:3,set:{track:'RU123456789'},bot:['Набор отправлен 📦<br>Трек-номер: <b>RU123456789</b>. Когда получите, нажмите кнопку.'],kb:[['Посылка получена','g7',1]],pn:function(s){return gCol(s,'Товар отправлен','new');},hint:'Снова вы блогер. Посылка пришла.'},
- g7:{st:4,bot:[function(s){return 'Отлично! Когда опубликуете?<br>Крайний срок — <b>'+s.dl+'</b>.';}],kb:[['28.10','g8'],['30.10','g8'],['02.11','g8'],['Нужен перенос','g7p']],pn:function(s){return gCol(s,'Товар получен','ok');},hint:'Блогер выбирает дату сам, но только в пределах срока. Можно попробовать «Нужен перенос».'},
- g7p:{st:4,bot:['Запрос на перенос отправлен менеджеру.<br>Причина: «уезжаю до 03.11». Пока срок прежний — <b>02.11</b>.'],pn:function(s){return gCol(s,'Товар получен','ok',[['Запрос на перенос',pill('02.11 → 06.11','wait')+' «уезжаю до 03.11»']]);},pa:[['Перенести на 06.11','g7a','ok'],['Отказать','g7n','bad']],hint:'Сам блогер срок не меняет, решает менеджер.'},
- g7a:{st:4,set:{dl:'06.11'},bot:['Менеджер одобрил перенос. Новый крайний срок — <b>06.11</b>.<br>Когда опубликуете?'],kb:[['04.11','g8'],['06.11','g8']],pn:function(s){return gCol(s,'Товар получен','ok',[['История сроков',hist(['02.11 → 06.11 · одобрила Мария · «уезжает до 03.11»'])]]);},hint:'Срок и напоминания пересчитаны, история изменений сохранена.'},
- g7n:{st:4,bot:['Перенос не одобрен, срок остаётся <b>02.11</b>. Когда опубликуете?'],kb:[['30.10','g8'],['02.11','g8']],pn:function(s){return gCol(s,'Товар получен','ok');},hint:'Отказ в переносе тоже записан в историю.'},
- g8:{st:5,pubFromLabel:1,bot:[function(s){return 'Записала дату публикации: <b>'+s.pub+'</b>.<br>Сначала пришлите черновик Reels на согласование.';}],kb:[['☁️ Отправить ссылку на черновик','g9',1]],pn:function(s){return gCol(s,'Ожидается контент','wait',[['Напоминания','за 3 дня, за 1 день и в день срока'],['Согласование','обязательно']]);},hint:'Система сама поставила напоминания. Видео тяжёлое, поэтому блогер присылает ссылку на облако. Отправьте её за блогера.'},
- g9:{st:5,me:'☁️ disk.yandex.ru/i/lavanda_v1',bot:['Черновик <b>v1</b> у менеджера. Ответ пришлю сюда.'],pn:function(){return {tab:'Согласования',h:crumb('Согласования › Лаванда × @anna.beauty')+card('Контент на согласовании',pill('v1','wait'),'<div class="vers"><div class="ver"><div class="thumb">▶</div>v1 · ссылка на облако</div></div><div class="note">Комментарий для правок: «Добавьте отметку @lavanda в первые 3 секунды»</div>')};},pa:[['Нужны правки','g10','warn'],['Согласовать','g11','ok']],hint:'Вы менеджер. Попробуйте вернуть черновик на правки.'},
- g10:{st:5,bot:['Нужны правки ✏️<br><i>«Добавьте отметку @lavanda в первые 3 секунды»</i>'],kb:[['☁️ Отправить исправленный','g10b',1]],pn:function(){return {tab:'Согласования',h:crumb('Согласования › Лаванда × @anna.beauty')+card('Требуются исправления',pill('ждём v2','bad'),'<div class="vers"><div class="ver old"><div class="thumb">▶</div>v1 · правки отправлены</div></div>')};},hint:'Блогер получил комментарий. Отправьте новую версию.'},
- g10b:{st:5,me:'☁️ disk.yandex.ru/i/lavanda_v2',bot:['Версия <b>v2</b> у менеджера.'],pn:function(){return {tab:'Согласования',h:crumb('Согласования › Лаванда × @anna.beauty')+card('Контент на согласовании',pill('v2','wait'),'<div class="vers"><div class="ver"><div class="thumb">▶</div>v2 · новая</div><div class="ver old"><div class="thumb">▶</div>v1 · «отметка в первые 3 с»</div></div>')};},pa:[['Согласовать','g11','ok']],hint:'Обе версии и комментарий сохранены. Согласуйте.'},
- g11:{st:6,bot:['<b>Контент согласован ✅</b><br>Можно публиковать. После публикации пришлите ссылку.','~ через 2 дня',function(s){return '🔔 Напоминание: публикация <b>'+s.pub+'</b>. Не забудьте прислать ссылку.';}],kb:[['🔗 Отправить ссылку','g12',1]],pn:function(s){return gCol(s,'Ожидается публикация','new',[['Контент','согласован, v2']]);},hint:'Бот сам напоминает о дате. Блогер публикует и присылает ссылку.'},
- g12:{st:7,me:'instagram.com/reel/Cx7Lav…',bot:['Ссылка получена. Отчёт у менеджера.'],pn:function(s){return gCol(s,'Отчёт на проверке','wait',[['Ссылка','instagram.com/reel/Cx7Lav…'],['Опубликовано',s.pub]]);},pa:[['Принять отчёт','g13','ok'],['Вернуть на исправление','g12r','bad']],hint:'Менеджер открывает ссылку и проверяет публикацию.'},
- g12r:{st:7,bot:['Менеджер просит дополнить отчёт:<br><i>«Пришлите скриншот статистики Reels через сутки»</i>'],kb:[['📎 Отправить скриншот','g12s',1]],pn:function(s){return gCol(s,'Требуются исправления отчёта','bad');},hint:'Отчёт вернулся блогеру с комментарием.'},
- g12s:{st:7,me:img('reels_stats.png','статистика Reels'),bot:['Скриншот передан менеджеру.'],pn:function(s){return gCol(s,'Отчёт на проверке','wait',[['Ссылка','instagram.com/reel/Cx7Lav…'],['Статистика','📎 reels_stats.png']]);},pa:[['Принять отчёт','g13','ok']],hint:'Теперь примите отчёт.'},
- g13:{st:8,end:1,bot:['<b>Сотрудничество «Лаванда» завершено</b> 🙌<br>Спасибо! Новые предложения будут приходить сюда.'],pn:function(s){return gCol(s,'Завершено','ok',[['История',hist(['19.10 заявка одобрена','20.10 товар отправлен','23.10 товар получен','25.10 черновик v1, правки','26.10 v2 согласован',s.pub+' опубликовано','отчёт принят'])]]);},hint:'Путь пройден. Все даты сохранены для отчёта бренду. Попробуйте второй сценарий — ресторан.'}
-};
-
-/* ---------- сценарий «Ресторан» ---------- */
-function rCamp(s){return {tab:'Предложения',h:crumb('Предложения › Кафе «Пенка»')+card('Кафе «Пенка» · ужин на двоих',pill('Активно','ok'),kv([['Тип','Посещение заведения'],['Этап рассылки','1 из 3: Любимки'],['Места',seats(s.seats,8)],['Лист ожидания','включён · 2 человека'],['Согласование','не нужно']]))};}
-function rApp(s,st,c){return {tab:'Заявки',h:crumb('Заявки › Кафе «Пенка»')+card('Анкета A-1057 · @kate_food',pill(st,c),kv([['Тариф, город','Любимки, Москва'],['Когда удобно',s.when||'—'],['Гостей',s.guests||'—'],['Записи в заведения','в октябре: '+s.lim+' из 2'],['Места',seats(s.seats,8)]]))+'<div class="note">Лимит записей тратится только при одобрении. Подача заявки его не трогает.</div>'};}
-function rCol(s,st,c,extra){return {tab:'Публикации',h:crumb('Публикации › Сотрудничество C-318')+card('Кафе «Пенка» × @kate_food',pill(st,c),kv([['Тип','Посещение заведения'],['Визит','24.10, 19:00'],['Крайний срок',s.dl],['Плановая дата',s.pub||'—'],['Записи в октябре',s.lim+' из 2']].concat(extra||[])))};}
-var R={
- r0:{st:0,bot:[OFFER_R],kb:[['Подробнее','r0d'],['Подать заявку','r1']],pn:rCamp,hint:'Вы блогер @kate_food, тариф Любимки. У тарифа лимит: 2 записи в заведения в месяц.'},
- r0d:{st:0,bot:['<b>Условия</b><br>• Ужин на двоих за счёт заведения<br>• Reels или пост + сторис с геометкой<br>• Публикация в течение 5 дней после визита<br>• Согласование не нужно'],kb:[['Подать заявку','r1',1]],pn:rCamp,hint:'Для этого предложения согласование контента выключено.'},
- r1:{st:1,bot:['Проверила ✅ тариф Любимки, Москва, просрочек нет.<br>Записи в заведения в октябре: <b>1 из 2</b>.','<b>Анкета · шаг 1 из 2</b><br>Когда вам удобно прийти?'],kb:[['Будни вечером','r2'],['Выходные днём','r2']],pn:rCamp,hint:'Если бы лимит был исчерпан, бот сразу сказал бы об этом и не принял заявку.'},
- r2:{st:1,whenFromLabel:1,bot:['<b>Шаг 2 из 2</b><br>Сколько будет гостей?'],kb:[['1','r3'],['2','r3']],pn:rCamp,hint:'Анкета короткая, поэтому бот спрашивает прямо в чате.'},
- r3:{st:2,guestsFromLabel:1,bot:['Заявка <b>№A-1057</b> отправлена. Статус: на рассмотрении.'],pn:function(s){return rApp(s,'На рассмотрении','new');},pa:[['Одобрить','r4','ok'],['Отклонить','rx','bad']],hint:'Вы менеджер. Лимит записей пока 1 из 2. Одобрите заявку.'},
- rx:{st:2,end:1,bot:['В этот раз заявка не одобрена. Лимит записей не изменился: <b>1 из 2</b>.'],pn:function(s){return rApp(s,'Отклонена','bad');},hint:'Отказ до одобрения лимит не тратит.'},
- r4:{st:3,set:{lim:2,seats:4},bot:['<b>Заявка одобрена 🎉</b><br>Вас ждут <b>24.10 в 19:00</b>.<br>Записи в октябре: <b>2 из 2</b>.'],kb:[['Запись подтверждена','r5'],['Не смогу прийти','rc']],pn:function(s){return rCol(s,'Ожидается посещение','wait');},hint:'Лимит списался только сейчас, при одобрении. Можно попробовать «Не смогу прийти».'},
- rc:{st:3,end:1,set:{lim:1,seats:3},bot:['Участие отменено. Лимит записей восстановлен: <b>1 из 2</b>.'],pn:function(s){return {tab:'Публикации',h:rCol(s,'Отменено блогером','bad',[['Лимит','списан 19.10 → возвращён 19.10']]).h+card('Лист ожидания',pill('авто','new'),'<div class="tbl-scroll"><table class="mini"><thead><tr><th>#</th><th>Блогер</th><th>Статус</th></tr></thead><tbody><tr class="hl"><td>1</td><td>@lena_eats</td><td>'+pill('Приглашена · ответ до 21:00','wait')+'</td></tr><tr><td>2</td><td>@max.food</td><td>'+pill('В очереди','mut')+'</td></tr></tbody></table></div>')};},hint:'Место вернулось, и система сама предложила его следующему из листа ожидания. Менеджер может поменять порядок вручную.'},
- r5:{st:3,bot:['Ждём вас 24.10 в 19:00. После визита нажмите кнопку.'],kb:[['Посещение состоялось','r6',1]],pn:function(s){return rCol(s,'Запись подтверждена','new');},hint:'Блогер сходил в кафе.'},
- r6:{st:4,bot:['Как прошло? Когда опубликуете?<br>Крайний срок — <b>29.10</b>.'],kb:[['26.10','r7'],['29.10','r7']],pn:function(s){return rCol(s,'Посещение подтверждено','ok');},hint:'Срок считается от даты визита.'},
- r7:{st:6,pubFromLabel:1,bot:[function(s){return 'Записала: <b>'+s.pub+'</b>. Согласование не нужно. Публикуйте и присылайте ссылку.';}],kb:[['🔗 Отправить ссылку','r9'],['⏩ Пропустить срок (демо)','r8']],pn:function(s){return rCol(s,'Ожидается публикация','new',[['Напоминания','за 3 дня, за 1 день и в день срока']]);},hint:'Шаг «Контент» пропущен. Чтобы увидеть, как работает просрочка, нажмите «Пропустить срок».'},
- r8:{st:6,bot:['~ 26.10','🔔 До крайнего срока 3 дня. Не забудьте прислать ссылку.','~ 28.10','🔔 Завтра крайний срок публикации.','~ 30.10','⚠️ <b>Срок публикации прошёл.</b><br>Новые заявки закрыты, пока вы не пришлёте ссылку на обзор «Пенки».'],kb:[['🔗 Отправить ссылку','r9',1]],pn:function(s){return {tab:'Публикации',h:rCol(s,'Ожидается публикация','new',[['Просрочка',pill('Просрочено на 1 день','bad')],['Блогер','новые заявки закрыты автоматически']]).h};},pa:[['Снять ограничение с причиной','r8m','']],hint:'Система сама напомнила, отметила просрочку и закрыла новые заявки. Этап сотрудничества сохранился: «ожидается публикация».'},
- r8m:{st:6,bot:['Менеджер снял ограничение. Пришлите ссылку до <b>01.11</b>.'],kb:[['🔗 Отправить ссылку','r9',1]],pn:function(s){return rCol(s,'Ожидается публикация','new',[['Просрочка',pill('Ограничение снято','mut')],['Журнал','Мария, 30.10: «болела, договорились до 01.11»']]);},hint:'Снять ограничение можно только с причиной, действие попадает в журнал.'},
- r9:{st:7,me:'instagram.com/p/Penka24…',bot:['Ссылка получена. Отчёт у менеджера.'],pn:function(s){return rCol(s,'Отчёт на проверке','wait',[['Ссылка','instagram.com/p/Penka24…']]);},pa:[['Принять отчёт','r10','ok']],hint:'Менеджер проверяет публикацию по ссылке.'},
- r10:{st:8,end:1,bot:['<b>Сотрудничество с «Пенкой» завершено</b> 🙌<br>Новые заявки снова открыты.'],pn:function(s){return rCol(s,'Завершено','ok');},hint:'Сотрудничество ушло из счётчиков неопубликованных и просроченных.'}
-};
-
-var SC={g:{nodes:G,start:'g0',who:'Блогер @anna.beauty · VIP',skip:[],s3:'Товар',init:{seats:7,recv:46,apps:9,dl:'02.11'}},
-        r:{nodes:R,start:'r0',who:'Блогер @kate_food · Любимки',skip:[5],s3:'Визит',init:{seats:3,lim:1,dl:'29.10'}}};
-var STAGES=['Предложение','Заявка','Решение','Получение','Дата','Контент','Публикация','Отчёт','Готово'];
-var TABS=['Главная','Предложения','Заявки','Согласования','Публикации','Блогеры','Отчёты'];
-
-var chat=document.getElementById('chat'),pnside=document.getElementById('pnside'),pnmain=document.getElementById('pnmain'),
-    prog=document.getElementById('progress'),hint=document.getElementById('hint'),turn=document.getElementById('turn'),who=document.getElementById('who');
-var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-var cur,st,busy=false,run=0,clock;
-
-function tm(){clock+=3;var h=12+Math.floor(clock/60),m=clock%60;return h+':'+(m<10?'0':'')+m;}
-function scroll(){chat.scrollTop=chat.scrollHeight;}
-function addBubble(cls,html){var d=document.createElement('div');d.className='bb '+cls;d.innerHTML=html+'<span class="tm">'+tm()+'</span>';chat.appendChild(d);scroll();}
-function addMe(me){
-  if(typeof me==='string'){addBubble('me',me);return;}
-  if(me.m==='video')addBubble('me','<div class="thumb">▶</div><div class="fname">'+me.n+' · '+me.d+'</div>');
-  else addBubble('me','<div class="thumb img">🖼 '+me.d+'</div><div class="fname">'+me.n+'</div>');
-}
-function renderProgress(i){
-  var sc=SC[cur];prog.innerHTML=STAGES.map(function(n,k){
-    var lbl=k===3?sc.s3:n,cls=sc.skip.indexOf(k)>-1?'skip':(k<i?'done':(k===i?'cur':''));
-    if(k===8&&i===8)cls='done';
-    return '<div class="pg '+cls+'"><i>'+(cls==='done'?'✓':k+1)+'</i>'+lbl+'</div>';}).join('');
-}
-function renderPanel(n){
-  var p=n.pn?n.pn(st):{tab:'Главная',h:''};
-  pnside.innerHTML='<div class="me"><span class="av m">М</span><div>Мария<small>Москва · Лаванда, Пенка</small></div></div>'+
-    TABS.map(function(t){var badge=(t===p.tab&&n.pa&&n.pa.length)?'<em>1</em>':'';return '<span class="t'+(t===p.tab?' on':'')+'">'+t+badge+'</span>';}).join('');
-  var acts='';
-  if(n.pa&&n.pa.length){acts='<div class="pacts live">'+n.pa.map(function(a){return '<button type="button" class="a-'+(a[2]||'n')+'" data-go="'+a[1]+'">'+a[0]+'</button>';}).join('')+'</div>';}
-  pnmain.innerHTML=p.h+acts;
-  pnmain.classList.remove('flash');void pnmain.offsetWidth;pnmain.classList.add('flash');
-}
-function setTurn(n){
-  if(n.end){turn.className='turn e';turn.textContent='Готово';}
-  else if(n.pa&&n.pa.length){turn.className='turn m';turn.textContent='Ход менеджера';}
-  else{turn.className='turn b';turn.textContent='Ход блогера';}
-  hint.textContent=n.hint||'';
-}
-function go(id,label){
-  var my=++run;var n=SC[cur].nodes[id];busy=true;
-  chat.querySelectorAll('.ikb').forEach(function(k){k.classList.add('used');k.classList.remove('live');});
-  pnmain.querySelectorAll('.pacts').forEach(function(p){p.remove();});
-  if(n.set)for(var k in n.set)st[k]=n.set[k];
-  if(n.pubFromLabel&&label)st.pub=label;
-  if(n.whenFromLabel&&label)st.when=label;
-  if(n.guestsFromLabel&&label)st.guests=label;
-  if(label!==null){addMe(n.me!==undefined?n.me:label);}
-  else if(n.me!==undefined){addMe(n.me);}
-  renderProgress(n.st);
-  renderPanel(n);
-  var msgs=n.bot.slice(),i=0;
-  function next(){
-    if(my!==run)return;
-    if(i>=msgs.length){finish();return;}
-    var m=msgs[i++];if(typeof m==='function')m=m(st);
-    if(m.charAt(0)==='~'){var s=document.createElement('div');s.className='sep';s.textContent=m.slice(1).trim();chat.appendChild(s);scroll();setTimeout(next,reduce?0:250);return;}
-    if(reduce){addBubble('bot',m);next();return;}
-    var t=document.createElement('div');t.className='typing';t.innerHTML='<span></span><span></span><span></span>';chat.appendChild(t);scroll();
-    setTimeout(function(){if(my!==run)return;t.remove();addBubble('bot',m);setTimeout(next,180);},520);
-  }
-  function finish(){
-    if(n.kb&&n.kb.length){
-      var kb=document.createElement('div');kb.className='ikb'+((n.pa&&n.pa.length)?'':' live');
-      n.kb.forEach(function(b){var e=document.createElement('button');e.type='button';e.textContent=b[0];e.dataset.go=b[1];if(b[2]||n.kb.length===1||b[0].length>16)e.className='full';kb.appendChild(e);});
-      chat.appendChild(kb);scroll();
-    }
-    if(n.end){var e=document.createElement('div');e.className='ikb live';e.innerHTML='<button type="button" class="full" data-restart="1">↺ Пройти ещё раз</button>';chat.appendChild(e);scroll();}
-    setTurn(n);busy=false;
-  }
-  setTurn(n);hint.textContent='…';
-  setTimeout(next,label===null&&!n.me?(reduce?0:250):(reduce?0:300));
-}
-function start(sc){
-  cur=sc;run++;clock=0;st=JSON.parse(JSON.stringify(SC[sc].init));
-  chat.innerHTML='<div class="sep">сегодня</div>';who.textContent=SC[sc].who;
-  document.querySelectorAll('#try .seg button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.sc===sc?'true':'false');});
-  go(SC[sc].start,null);
-}
-chat.addEventListener('click',function(e){var b=e.target.closest('button');if(!b||busy)return;
-  if(b.dataset.restart){start(cur);return;}
-  if(b.closest('.ikb.used'))return;go(b.dataset.go,b.textContent);});
-pnmain.addEventListener('click',function(e){var b=e.target.closest('button[data-go]');if(!b||busy)return;go(b.dataset.go,null);});
-document.querySelectorAll('#try .seg button').forEach(function(b){b.addEventListener('click',function(){start(b.dataset.sc);});});
-document.getElementById('restart').addEventListener('click',function(){start(cur);});
-start('g');
 
 /* ---------- карты путей ---------- */
 var J={
@@ -1211,5 +1077,6 @@ btn.addEventListener('click',function(){
 })();
 </script>
 
+<script src="assets/iphone-demo.js"></script>
 </body>
 </html>
